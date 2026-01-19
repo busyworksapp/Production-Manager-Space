@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLA Configuration - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/admin/departments" class="nav-link active">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>SLA Configuration</h1>
+            <button class="btn btn-primary" onclick="showModal('addSlaModal')">Add SLA</button>
+        </div>
+
+        <div class="card" style="margin-bottom: 1rem;">
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label" for="filterEntityType">Entity Type</label>
+                    <select id="filterEntityType" class="form-select" onchange="filterSlas()">
+                        <option value="">All Types</option>
+                        <option value="replacement_ticket">Replacement Ticket</option>
+                        <option value="customer_return">Customer Return</option>
+                        <option value="sop_ticket">SOP Ticket</option>
+                        <option value="maintenance_ticket">Maintenance Ticket</option>
+                        <option value="order">Order</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="filterDepartment">Department</label>
+                    <select id="filterDepartment" class="form-select" onchange="filterSlas()">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="filterPriority">Priority</label>
+                    <select id="filterPriority" class="form-select" onchange="filterSlas()">
+                        <option value="">All Priorities</option>
+                        <option value="low">Low</option>
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>SLA Name</th>
+                        <th>Entity Type</th>
+                        <th>Department</th>
+                        <th>Priority</th>
+                        <th>Response Time</th>
+                        <th>Resolution Time</th>
+                        <th>Escalation Levels</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="slasTable">
+                    <tr><td colspan="9" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addSlaModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">Add SLA Configuration</div>
+            <form id="slaForm">
+                <div class="form-group">
+                    <label class="form-label" for="slaName">SLA Name*</label>
+                    <input type="text" id="slaName" class="form-input" required>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="entityType">Entity Type*</label>
+                        <select id="entityType" class="form-select" required>
+                            <option value="">Select Type</option>
+                            <option value="replacement_ticket">Replacement Ticket</option>
+                            <option value="customer_return">Customer Return</option>
+                            <option value="sop_ticket">SOP Ticket</option>
+                            <option value="maintenance_ticket">Maintenance Ticket</option>
+                            <option value="order">Order</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="departmentId">Department</label>
+                        <select id="departmentId" class="form-select">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="priority">Priority*</label>
+                        <select id="priority" class="form-select" required>
+                            <option value="low">Low</option>
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="isActive" checked> Active
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="responseTimeMinutes">Response Time (Minutes)*</label>
+                        <input type="number" id="responseTimeMinutes" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="resolutionTimeMinutes">Resolution Time (Minutes)*</label>
+                        <input type="number" id="resolutionTimeMinutes" class="form-input" required>
+                    </div>
+                </div>
+                
+                <hr style="margin: 1.5rem 0;">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <strong>Escalation Levels</strong>
+                    <button type="button" class="btn btn-sm btn-success" onclick="addEscalationLevel()">+ Add Level</button>
+                </div>
+                
+                <div id="escalationLevelsContainer"></div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addSlaModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save SLA</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewSlaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">SLA Details</div>
+            <div id="slaDetails"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('viewSlaModal')">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/sla.js"></script>
+</body>
+</html>

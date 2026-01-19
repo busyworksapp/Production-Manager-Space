@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employees - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/admin/departments" class="nav-link active">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Employees</h1>
+            <button class="btn btn-primary" onclick="showModal('addEmployeeModal')">Add Employee</button>
+        </div>
+        
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Employee #</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Type</th>
+                        <th>Position</th>
+                        <th>Contact</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="employeesTable">
+                    <tr><td colspan="7" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addEmployeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Add Employee</div>
+            <form id="employeeForm">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="employeeNumber">Employee Number*</label>
+                        <input type="text" id="employeeNumber" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="employeeType">Employee Type*</label>
+                        <select id="employeeType" class="form-select" required>
+                            <option value="operator">Operator</option>
+                            <option value="supervisor">Supervisor</option>
+                            <option value="coordinator">Coordinator</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                            <option value="applique_cutter">Appliqué Cutter</option>
+                            <option value="packer">Packer</option>
+                            <option value="technician">Technician</option>
+                            <option value="planner">Planner</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="firstName">First Name*</label>
+                        <input type="text" id="firstName" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="lastName">Last Name*</label>
+                        <input type="text" id="lastName" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email</label>
+                        <input type="email" id="email" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Phone</label>
+                        <input type="text" id="phone" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="position">Position</label>
+                    <input type="text" id="position" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="createUserAccount">
+                        Create user account for system login
+                    </label>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addEmployeeModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script>
+        async function loadEmployees() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('username').textContent = `${user.first_name} ${user.last_name}`;
+            }
+            
+            try {
+                const response = await API.employees.getAll();
+                
+                if (response.success) {
+                    const tbody = document.getElementById('employeesTable');
+                    tbody.innerHTML = response.data.map(emp => `
+                        <tr>
+                            <td>${emp.employee_number}</td>
+                            <td>${emp.first_name} ${emp.last_name}</td>
+                            <td>${emp.department_name || 'N/A'}</td>
+                            <td>${emp.employee_type}</td>
+                            <td>${emp.position || 'N/A'}</td>
+                            <td>
+                                ${emp.email || ''}<br>
+                                ${emp.phone || ''}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="viewEmployee(${emp.id})">View</button>
+                                <button class="btn btn-sm btn-secondary" onclick="editEmployee(${emp.id})">Edit</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading employees:', error);
+                showAlert('Failed to load employees', 'danger');
+            }
+        }
+        
+        document.getElementById('employeeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                employee_number: document.getElementById('employeeNumber').value,
+                first_name: document.getElementById('firstName').value,
+                last_name: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                employee_type: document.getElementById('employeeType').value,
+                position: document.getElementById('position').value,
+                create_user_account: document.getElementById('createUserAccount').checked
+            };
+            
+            try {
+                const response = await API.employees.create(data);
+                
+                if (response.success) {
+                    showAlert('Employee created successfully', 'success');
+                    hideModal('addEmployeeModal');
+                    resetForm('employeeForm');
+                    loadEmployees();
+                }
+            } catch (error) {
+                showAlert(error.message || 'Failed to create employee', 'danger');
+            }
+        });
+        
+        loadEmployees();
+    </script>
+</body>
+</html>

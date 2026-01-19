@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Tickets - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link active">Maintenance</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Maintenance Tickets</h1>
+            <button class="btn btn-primary" onclick="showModal('addTicketModal')">Create Ticket</button>
+        </div>
+        
+        <div class="card" style="margin-bottom: 1rem;">
+            <select id="statusFilter" class="form-select" style="max-width: 200px;" onchange="loadTickets()">
+                <option value="">All Statuses</option>
+                <option value="open">Open</option>
+                <option value="assigned">Assigned</option>
+                <option value="in_progress">In Progress</option>
+                <option value="awaiting_parts">Awaiting Parts</option>
+                <option value="completed">Completed</option>
+            </select>
+        </div>
+        
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ticket #</th>
+                        <th>Machine</th>
+                        <th>Department</th>
+                        <th>Issue</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketsTable">
+                    <tr><td colspan="8" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addTicketModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Create Maintenance Ticket</div>
+            <form id="ticketForm">
+                <div class="form-group">
+                    <label class="form-label" for="issueDescription">Issue Description*</label>
+                    <textarea id="issueDescription" class="form-textarea" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="severity">Severity*</label>
+                    <select id="severity" class="form-select" required>
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="notes">Notes</label>
+                    <textarea id="notes" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addTicketModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script>
+        async function loadTickets() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('username').textContent = `${user.first_name} ${user.last_name}`;
+            }
+            
+            const status = document.getElementById('statusFilter').value;
+            const params = status ? { status } : {};
+            
+            try {
+                const response = await API.maintenance.getTickets(params);
+                
+                if (response.success) {
+                    const tbody = document.getElementById('ticketsTable');
+                    tbody.innerHTML = response.data.map(ticket => `
+                        <tr>
+                            <td>${ticket.ticket_number}</td>
+                            <td>${ticket.machine_name} (${ticket.machine_number})</td>
+                            <td>${ticket.department_name}</td>
+                            <td>${ticket.issue_description.substring(0, 50)}...</td>
+                            <td><span class="badge ${ticket.severity === 'critical' ? 'badge-danger' : ticket.severity === 'high' ? 'badge-warning' : 'badge-info'}">${ticket.severity.toUpperCase()}</span></td>
+                            <td>${createStatusBadge(ticket.status)}</td>
+                            <td>${ticket.assigned_to_name || 'Unassigned'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="viewTicket(${ticket.id})">View</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading tickets:', error);
+                showAlert('Failed to load tickets', 'danger');
+            }
+        }
+        
+        loadTickets();
+    </script>
+</body>
+</html>

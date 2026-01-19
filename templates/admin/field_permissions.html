@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Field Permissions - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/admin/departments" class="nav-link active">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Field-Level Permissions</h1>
+            <button class="btn btn-primary" onclick="showModal('addPermissionModal')">Add Field Permission</button>
+        </div>
+
+        <div class="card" style="margin-bottom: 1rem;">
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label" for="filterRole">Filter by Role</label>
+                    <select id="filterRole" class="form-select" onchange="filterPermissions()">
+                        <option value="">All Roles</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="filterEntity">Filter by Entity</label>
+                    <select id="filterEntity" class="form-select" onchange="filterPermissions()">
+                        <option value="">All Entities</option>
+                        <option value="order">Orders</option>
+                        <option value="defect">Defects</option>
+                        <option value="sop_ticket">SOP Tickets</option>
+                        <option value="maintenance_ticket">Maintenance Tickets</option>
+                        <option value="preventive_maintenance">Preventive Maintenance</option>
+                        <option value="employee">Employees</option>
+                        <option value="machine">Machines</option>
+                        <option value="product">Products</option>
+                        <option value="bom">Bill of Materials</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="searchField">Search Field</label>
+                    <input type="text" id="searchField" class="form-input" placeholder="Field name..." onkeyup="filterPermissions()">
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>Entity Type</th>
+                            <th>Field Name</th>
+                            <th>Permission</th>
+                            <th>Has Conditions</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="permissionsTable">
+                        <tr><td colspan="7" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div id="addPermissionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Add Field Permission</div>
+            <form id="permissionForm">
+                <div class="form-group">
+                    <label class="form-label" for="roleId">Role*</label>
+                    <select id="roleId" class="form-select" required>
+                        <option value="">Select Role</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="entityType">Entity Type*</label>
+                    <select id="entityType" class="form-select" required onchange="loadEntityFields()">
+                        <option value="">Select Entity</option>
+                        <option value="order">Orders</option>
+                        <option value="defect">Defects</option>
+                        <option value="sop_ticket">SOP Tickets</option>
+                        <option value="maintenance_ticket">Maintenance Tickets</option>
+                        <option value="preventive_maintenance">Preventive Maintenance</option>
+                        <option value="employee">Employees</option>
+                        <option value="machine">Machines</option>
+                        <option value="product">Products</option>
+                        <option value="bom">Bill of Materials</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="fieldName">Field Name*</label>
+                    <input type="text" id="fieldName" class="form-input" required placeholder="e.g., customer_name, price, status">
+                    <small style="color: var(--color-text-secondary);">Enter the exact database field name</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="permissionType">Permission Type*</label>
+                    <select id="permissionType" class="form-select" required>
+                        <option value="">Select Permission</option>
+                        <option value="read">Read Only</option>
+                        <option value="write">Read & Write</option>
+                        <option value="hidden">Hidden</option>
+                        <option value="required">Required</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="conditionalRules">Conditional Rules (JSON, Optional)</label>
+                    <textarea id="conditionalRules" class="form-textarea" rows="5" placeholder='{"condition": "status", "equals": "approved"}'></textarea>
+                    <small style="color: var(--color-text-secondary);">
+                        Define conditions when this permission applies. Example: {"condition": "department_id", "equals": "5"}
+                    </small>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addPermissionModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Permission</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editPermissionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Field Permission</div>
+            <form id="editPermissionForm">
+                <input type="hidden" id="editPermissionId">
+                
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <input type="text" id="editRoleName" class="form-input" readonly style="background-color: var(--color-bg-main);">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Entity Type</label>
+                    <input type="text" id="editEntityType" class="form-input" readonly style="background-color: var(--color-bg-main);">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Field Name</label>
+                    <input type="text" id="editFieldName" class="form-input" readonly style="background-color: var(--color-bg-main);">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="editPermissionType">Permission Type*</label>
+                    <select id="editPermissionType" class="form-select" required>
+                        <option value="read">Read Only</option>
+                        <option value="write">Read & Write</option>
+                        <option value="hidden">Hidden</option>
+                        <option value="required">Required</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="editConditionalRules">Conditional Rules (JSON, Optional)</label>
+                    <textarea id="editConditionalRules" class="form-textarea" rows="5"></textarea>
+                    <small style="color: var(--color-text-secondary);">
+                        Define conditions when this permission applies
+                    </small>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('editPermissionModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Permission</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewConditionsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Conditional Rules</div>
+            <div id="conditionsContent"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('viewConditionsModal')">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/field_permissions.js"></script>
+</body>
+</html>

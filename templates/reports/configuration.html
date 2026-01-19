@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Configuration - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/reports/configuration" class="nav-link active">Reports</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Report Configuration</h1>
+            <button class="btn btn-primary" onclick="showModal('addReportModal')">Create Report</button>
+        </div>
+        
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Report Name</th>
+                        <th>Type</th>
+                        <th>Schedule</th>
+                        <th>Recipients</th>
+                        <th>Last Run</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTable">
+                    <tr><td colspan="7" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addReportModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">Create Report Configuration</div>
+            <form id="reportForm">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="reportName">Report Name*</label>
+                        <input type="text" id="reportName" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="reportType">Report Type*</label>
+                        <select id="reportType" class="form-select" required onchange="updateReportOptions()">
+                            <option value="">Select Type</option>
+                            <option value="production_summary">Production Summary</option>
+                            <option value="defects_analysis">Defects Analysis</option>
+                            <option value="sop_compliance">SOP Compliance</option>
+                            <option value="maintenance_log">Maintenance Log</option>
+                            <option value="cost_analysis">Cost Analysis</option>
+                            <option value="department_performance">Department Performance</option>
+                            <option value="order_status">Order Status</option>
+                            <option value="sla_tracking">SLA Tracking</option>
+                            <option value="custom">Custom Query</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="description">Description</label>
+                    <textarea id="description" class="form-textarea" rows="2"></textarea>
+                </div>
+                
+                <hr>
+                <h3>Report Filters</h3>
+                
+                <div class="grid grid-3">
+                    <div class="form-group">
+                        <label class="form-label" for="filterDepartment">Department</label>
+                        <select id="filterDepartment" class="form-select">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="filterDateRange">Date Range*</label>
+                        <select id="filterDateRange" class="form-select" required>
+                            <option value="today">Today</option>
+                            <option value="yesterday">Yesterday</option>
+                            <option value="last_7_days">Last 7 Days</option>
+                            <option value="last_30_days">Last 30 Days</option>
+                            <option value="this_month">This Month</option>
+                            <option value="last_month">Last Month</option>
+                            <option value="this_year">This Year</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="filterStatus">Status Filter</label>
+                        <select id="filterStatus" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="on_hold">On Hold</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="customDateRange" style="display: none;">
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="customStartDate">Start Date</label>
+                            <input type="date" id="customStartDate" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="customEndDate">End Date</label>
+                            <input type="date" id="customEndDate" class="form-input">
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                <h3>Output Configuration</h3>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="outputFormat">Output Format*</label>
+                        <select id="outputFormat" class="form-select" required>
+                            <option value="pdf">PDF</option>
+                            <option value="excel">Excel</option>
+                            <option value="csv">CSV</option>
+                            <option value="html">HTML</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="includeCharts">Include Charts</label>
+                        <select id="includeCharts" class="form-select">
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <hr>
+                <h3>Schedule Configuration</h3>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="scheduleType">Schedule Type*</label>
+                        <select id="scheduleType" class="form-select" required onchange="updateScheduleOptions()">
+                            <option value="manual">Manual (On-Demand)</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="scheduleTimeGroup" style="display: none;">
+                        <label class="form-label" for="scheduleTime">Execution Time</label>
+                        <input type="time" id="scheduleTime" class="form-input">
+                    </div>
+                </div>
+                
+                <div id="weeklySchedule" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="scheduleDay">Day of Week</label>
+                        <select id="scheduleDay" class="form-select">
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="7">Sunday</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="monthlySchedule" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="scheduleDate">Day of Month</label>
+                        <input type="number" id="scheduleDate" class="form-input" min="1" max="31" placeholder="1-31">
+                    </div>
+                </div>
+                
+                <hr>
+                <h3>Email Recipients</h3>
+                
+                <div style="margin-bottom: 1rem;">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addRecipient()">+ Add Recipient</button>
+                </div>
+                
+                <div id="recipientsContainer"></div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addReportModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="editReportModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">Edit Report Configuration</div>
+            <form id="editReportForm">
+                <input type="hidden" id="editReportId">
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="editReportName">Report Name*</label>
+                        <input type="text" id="editReportName" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="editReportType">Report Type*</label>
+                        <select id="editReportType" class="form-select" required>
+                            <option value="production_summary">Production Summary</option>
+                            <option value="defects_analysis">Defects Analysis</option>
+                            <option value="sop_compliance">SOP Compliance</option>
+                            <option value="maintenance_log">Maintenance Log</option>
+                            <option value="cost_analysis">Cost Analysis</option>
+                            <option value="department_performance">Department Performance</option>
+                            <option value="order_status">Order Status</option>
+                            <option value="sla_tracking">SLA Tracking</option>
+                            <option value="custom">Custom Query</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="editDescription">Description</label>
+                    <textarea id="editDescription" class="form-textarea" rows="2"></textarea>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="editScheduleType">Schedule Type*</label>
+                        <select id="editScheduleType" class="form-select" required>
+                            <option value="manual">Manual (On-Demand)</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="editIsActive">Status*</label>
+                        <select id="editIsActive" class="form-select" required>
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('editReportModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script>
+        let recipientCount = 0;
+        let departments = [];
+        
+        async function loadReports() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('username').textContent = `${user.first_name} ${user.last_name}`;
+            }
+            
+            try {
+                const response = await API.reports.getScheduled();
+                
+                if (response.success) {
+                    const tbody = document.getElementById('reportsTable');
+                    tbody.innerHTML = response.data.map(report => `
+                        <tr>
+                            <td>${report.report_name}</td>
+                            <td>${report.report_type.replace(/_/g, ' ')}</td>
+                            <td>${report.schedule_type}</td>
+                            <td>${report.recipients ? JSON.parse(report.recipients).length : 0} recipients</td>
+                            <td>${report.last_run_at || 'Never'}</td>
+                            <td>${createStatusBadge(report.is_active ? 'active' : 'inactive')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="editReport(${report.id})">Edit</button>
+                                <button class="btn btn-sm btn-success" onclick="runReport(${report.id})">Run Now</button>
+                                <button class="btn btn-sm ${report.is_active ? 'btn-warning' : 'btn-success'}" onclick="toggleReport(${report.id}, ${report.is_active})">${report.is_active ? 'Deactivate' : 'Activate'}</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                showAlert('Failed to load reports', 'danger');
+            }
+        }
+        
+        async function loadDepartments() {
+            try {
+                const response = await API.departments.getAll();
+                if (response.success) {
+                    departments = response.data;
+                    const select = document.getElementById('filterDepartment');
+                    response.data.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading departments:', error);
+            }
+        }
+        
+        function updateReportOptions() {
+            const reportType = document.getElementById('reportType').value;
+        }
+        
+        function updateScheduleOptions() {
+            const scheduleType = document.getElementById('scheduleType').value;
+            const timeGroup = document.getElementById('scheduleTimeGroup');
+            const weeklySchedule = document.getElementById('weeklySchedule');
+            const monthlySchedule = document.getElementById('monthlySchedule');
+            
+            if (scheduleType === 'manual') {
+                timeGroup.style.display = 'none';
+                weeklySchedule.style.display = 'none';
+                monthlySchedule.style.display = 'none';
+            } else {
+                timeGroup.style.display = 'block';
+                weeklySchedule.style.display = scheduleType === 'weekly' ? 'block' : 'none';
+                monthlySchedule.style.display = scheduleType === 'monthly' ? 'block' : 'none';
+            }
+        }
+        
+        document.getElementById('filterDateRange').addEventListener('change', function() {
+            const customDateRange = document.getElementById('customDateRange');
+            customDateRange.style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+        
+        function addRecipient() {
+            recipientCount++;
+            const container = document.getElementById('recipientsContainer');
+            const recipientDiv = document.createElement('div');
+            recipientDiv.className = 'card';
+            recipientDiv.style.marginBottom = '1rem';
+            recipientDiv.id = `recipient-${recipientCount}`;
+            recipientDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4>Recipient ${recipientCount}</h4>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeRecipient('recipient-${recipientCount}')">Remove</button>
+                </div>
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Recipient Type*</label>
+                        <select class="form-select recipient-type" required onchange="handleRecipientTypeChange(this, 'recipient-${recipientCount}')">
+                            <option value="email">Email Address</option>
+                            <option value="user">System User</option>
+                            <option value="role">Role</option>
+                        </select>
+                    </div>
+                    <div class="form-group recipient-value-group">
+                        <label class="form-label recipient-value-label">Email Address*</label>
+                        <input type="email" class="form-input recipient-value" required>
+                    </div>
+                </div>
+            `;
+            container.appendChild(recipientDiv);
+        }
+        
+        function handleRecipientTypeChange(select, recipientId) {
+            const recipientDiv = document.getElementById(recipientId);
+            const valueGroup = recipientDiv.querySelector('.recipient-value-group');
+            const valueLabel = recipientDiv.querySelector('.recipient-value-label');
+            const valueInput = recipientDiv.querySelector('.recipient-value');
+            
+            const type = select.value;
+            
+            if (type === 'email') {
+                valueLabel.textContent = 'Email Address*';
+                valueInput.type = 'email';
+                valueInput.innerHTML = '';
+            } else if (type === 'user') {
+                valueLabel.textContent = 'User*';
+                const newSelect = document.createElement('select');
+                newSelect.className = 'form-select recipient-value';
+                newSelect.required = true;
+                newSelect.innerHTML = '<option value="">Select User</option>';
+                valueInput.replaceWith(newSelect);
+            } else if (type === 'role') {
+                valueLabel.textContent = 'Role*';
+                const newSelect = document.createElement('select');
+                newSelect.className = 'form-select recipient-value';
+                newSelect.required = true;
+                newSelect.innerHTML = `
+                    <option value="">Select Role</option>
+                    <option value="admin">Admin</option>
+                    <option value="manager">Manager</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="planner">Planner</option>
+                    <option value="qc">QC Coordinator</option>
+                `;
+                valueInput.replaceWith(newSelect);
+            }
+        }
+        
+        function removeRecipient(recipientId) {
+            document.getElementById(recipientId)?.remove();
+        }
+        
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const recipients = [];
+            const recipientDivs = document.querySelectorAll('#recipientsContainer > div');
+            
+            recipientDivs.forEach(div => {
+                const type = div.querySelector('.recipient-type').value;
+                const value = div.querySelector('.recipient-value').value;
+                recipients.push({ type, value });
+            });
+            
+            const filters = {
+                department_id: document.getElementById('filterDepartment').value || null,
+                date_range: document.getElementById('filterDateRange').value,
+                status: document.getElementById('filterStatus').value || null
+            };
+            
+            if (filters.date_range === 'custom') {
+                filters.custom_start_date = document.getElementById('customStartDate').value;
+                filters.custom_end_date = document.getElementById('customEndDate').value;
+            }
+            
+            const scheduleConfig = {
+                type: document.getElementById('scheduleType').value,
+                time: document.getElementById('scheduleTime').value || null
+            };
+            
+            if (scheduleConfig.type === 'weekly') {
+                scheduleConfig.day_of_week = document.getElementById('scheduleDay').value;
+            } else if (scheduleConfig.type === 'monthly') {
+                scheduleConfig.day_of_month = document.getElementById('scheduleDate').value;
+            }
+            
+            const reportData = {
+                report_name: document.getElementById('reportName').value,
+                report_type: document.getElementById('reportType').value,
+                description: document.getElementById('description').value,
+                filters: filters,
+                output_format: document.getElementById('outputFormat').value,
+                include_charts: document.getElementById('includeCharts').value === 'true',
+                schedule_type: scheduleConfig.type,
+                schedule_config: scheduleConfig,
+                recipients: recipients
+            };
+            
+            try {
+                const response = await API.reports.createScheduled(reportData);
+                if (response.success) {
+                    showAlert('Report configuration created successfully', 'success');
+                    hideModal('addReportModal');
+                    document.getElementById('reportForm').reset();
+                    document.getElementById('recipientsContainer').innerHTML = '';
+                    recipientCount = 0;
+                    loadReports();
+                } else {
+                    showAlert(response.message || 'Failed to create report', 'danger');
+                }
+            } catch (error) {
+                console.error('Error creating report:', error);
+                showAlert('Failed to create report', 'danger');
+            }
+        });
+        
+        async function editReport(id) {
+            try {
+                const response = await API.reports.getScheduledById(id);
+                if (response.success) {
+                    const report = response.data;
+                    
+                    document.getElementById('editReportId').value = report.id;
+                    document.getElementById('editReportName').value = report.report_name;
+                    document.getElementById('editReportType').value = report.report_type;
+                    document.getElementById('editDescription').value = report.description || '';
+                    document.getElementById('editScheduleType').value = report.schedule_type;
+                    document.getElementById('editIsActive').value = report.is_active ? 'true' : 'false';
+                    
+                    showModal('editReportModal');
+                }
+            } catch (error) {
+                console.error('Error loading report:', error);
+                showAlert('Failed to load report', 'danger');
+            }
+        }
+        
+        document.getElementById('editReportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const reportId = document.getElementById('editReportId').value;
+            const reportData = {
+                report_name: document.getElementById('editReportName').value,
+                report_type: document.getElementById('editReportType').value,
+                description: document.getElementById('editDescription').value,
+                schedule_type: document.getElementById('editScheduleType').value,
+                is_active: document.getElementById('editIsActive').value === 'true'
+            };
+            
+            try {
+                const response = await API.reports.updateScheduled(reportId, reportData);
+                if (response.success) {
+                    showAlert('Report updated successfully', 'success');
+                    hideModal('editReportModal');
+                    loadReports();
+                } else {
+                    showAlert(response.message || 'Failed to update report', 'danger');
+                }
+            } catch (error) {
+                console.error('Error updating report:', error);
+                showAlert('Failed to update report', 'danger');
+            }
+        });
+        
+        async function toggleReport(id, currentStatus) {
+            try {
+                const response = await API.reports.updateScheduled(id, { is_active: !currentStatus });
+                if (response.success) {
+                    showAlert(`Report ${!currentStatus ? 'activated' : 'deactivated'} successfully`, 'success');
+                    loadReports();
+                } else {
+                    showAlert(response.message || 'Failed to update report', 'danger');
+                }
+            } catch (error) {
+                console.error('Error toggling report:', error);
+                showAlert('Failed to update report', 'danger');
+            }
+        }
+        
+        async function runReport(id) {
+            try {
+                const response = await API.reports.runScheduled(id);
+                if (response.success) {
+                    showAlert('Report execution started', 'success');
+                    setTimeout(loadReports, 2000);
+                } else {
+                    showAlert(response.message || 'Failed to run report', 'danger');
+                }
+            } catch (error) {
+                console.error('Error running report:', error);
+                showAlert('Failed to run report', 'danger');
+            }
+        }
+        
+        loadReports();
+        loadDepartments();
+    </script>
+</body>
+</html>

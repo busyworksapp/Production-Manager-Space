@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Dashboard - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/manager/dashboard" class="nav-link active">Manager Controls</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge hidden">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h1 id="departmentTitle">Department Dashboard</h1>
+        
+        <div class="grid grid-4 mt-2">
+            <div class="stat-card">
+                <div class="stat-value" id="totalEmployees">0</div>
+                <div class="stat-label">Total Employees</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalMachines">0</div>
+                <div class="stat-label">Total Machines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="activeJobs">0</div>
+                <div class="stat-label">Active Jobs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="pendingJobs">0</div>
+                <div class="stat-label">Pending Jobs</div>
+            </div>
+        </div>
+        
+        <div class="tabs mt-2">
+            <button class="tab-button active" data-tab="allocations">Employee-Machine Allocations</button>
+            <button class="tab-button" data-tab="jobs">Job Management</button>
+            <button class="tab-button" data-tab="overview">Department Overview</button>
+        </div>
+        
+        <div id="allocationsTab" class="tab-content">
+            <div class="flex-between mb-2">
+                <h2>Employee-Machine Allocations</h2>
+                <button class="btn btn-primary" id="addAllocationBtn">Allocate Employee</button>
+            </div>
+            
+            <div class="card">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Machine</th>
+                            <th>Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allocationsTable">
+                        <tr><td colspan="7" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="jobsTab" class="tab-content hidden">
+            <div class="flex-between mb-2">
+                <h2>Department Jobs</h2>
+                <button class="btn btn-primary" id="assignJobBtn">Assign Job</button>
+            </div>
+            
+            <div class="card">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Job ID</th>
+                            <th>Order</th>
+                            <th>Product</th>
+                            <th>Stage</th>
+                            <th>Assigned To</th>
+                            <th>Machine</th>
+                            <th>Scheduled Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jobsTable">
+                        <tr><td colspan="9" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="overviewTab" class="tab-content hidden">
+            <div class="grid grid-2 mt-2">
+                <div class="card">
+                    <div class="card-header">Employees</div>
+                    <div id="employeesList">Loading...</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">Machines</div>
+                    <div id="machinesList">Loading...</div>
+                </div>
+            </div>
+            
+            <div class="card mt-2">
+                <div class="card-header">Production Stages</div>
+                <div id="stagesList">Loading...</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="addAllocationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Allocate Employee to Machine</div>
+            <form id="allocationForm">
+                <div class="form-group">
+                    <label class="form-label" for="employeeId">Employee*</label>
+                    <select id="employeeId" class="form-select" required>
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="machineId">Machine*</label>
+                    <select id="machineId" class="form-select" required>
+                        <option value="">Select Machine</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="allocationType">Allocation Type*</label>
+                    <select id="allocationType" class="form-select" required>
+                        <option value="primary">Primary</option>
+                        <option value="secondary">Secondary</option>
+                        <option value="backup">Backup</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="startDate">Start Date*</label>
+                        <input type="date" id="startDate" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="endDate">End Date (Optional)</label>
+                        <input type="date" id="endDate" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="allocationNotes">Notes</label>
+                    <textarea id="allocationNotes" class="form-textarea" rows="3"></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal-close="addAllocationModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveAllocationBtn">Save Allocation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="editAllocationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Allocation</div>
+            <form id="editAllocationForm">
+                <input type="hidden" id="editAllocationId">
+                
+                <div class="form-group">
+                    <label class="form-label" for="editAllocationType">Allocation Type*</label>
+                    <select id="editAllocationType" class="form-select" required>
+                        <option value="primary">Primary</option>
+                        <option value="secondary">Secondary</option>
+                        <option value="backup">Backup</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="editStartDate">Start Date*</label>
+                        <input type="date" id="editStartDate" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="editEndDate">End Date (Optional)</label>
+                        <input type="date" id="editEndDate" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="editIsActive">Status*</label>
+                    <select id="editIsActive" class="form-select" required>
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="editAllocationNotes">Notes</label>
+                    <textarea id="editAllocationNotes" class="form-textarea" rows="3"></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal-close="editAllocationModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Allocation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="assignJobModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Assign/Reassign Job</div>
+            <form id="assignJobForm">
+                <input type="hidden" id="jobId">
+                
+                <div class="form-group">
+                    <label class="form-label" for="jobSelect">Select Job*</label>
+                    <select id="jobSelect" class="form-select" required>
+                        <option value="">Select Job</option>
+                    </select>
+                </div>
+                
+                <div id="jobDetails" class="job-details-panel hidden">
+                    <p><strong>Order:</strong> <span id="jobOrderNumber"></span></p>
+                    <p><strong>Product:</strong> <span id="jobProductName"></span></p>
+                    <p><strong>Current Status:</strong> <span id="jobCurrentStatus"></span></p>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="assignEmployee">Assign To Employee*</label>
+                    <select id="assignEmployee" class="form-select" required>
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="assignMachine">Assign Machine*</label>
+                    <select id="assignMachine" class="form-select" required>
+                        <option value="">Select Machine</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="scheduledDate">Scheduled Date*</label>
+                    <input type="date" id="scheduledDate" class="form-input" required>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal-close="assignJobModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveJobBtn">Assign Job</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script type="module">
+        import { ManagerDashboard } from '/static/js/modules/manager.js';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            new ManagerDashboard();
+        });
+    </script>
+</body>
+</html>
+            const allocationsTab = document.getElementById('allocationsTab');
+            const jobsTab = document.getElementById('jobsTab');
+            const overviewTab = document.getElementById('overviewTab');
+            const buttons = document.querySelectorAll('.tab-button');
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            if (tab === 'allocations') {
+                allocationsTab.style.display = 'block';
+                jobsTab.style.display = 'none';
+                overviewTab.style.display = 'none';
+                buttons[0].classList.add('active');
+            } else if (tab === 'jobs') {
+                allocationsTab.style.display = 'none';
+                jobsTab.style.display = 'block';
+                overviewTab.style.display = 'none';
+                buttons[1].classList.add('active');
+                loadDepartmentJobs();
+            } else {
+                allocationsTab.style.display = 'none';
+                jobsTab.style.display = 'none';
+                overviewTab.style.display = 'block';
+                buttons[2].classList.add('active');
+                loadDepartmentOverview();
+            }
+        }
+        
+        async function loadDepartmentData() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('username').textContent = `${user.first_name} ${user.last_name}`;
+            }
+            
+            try {
+                const response = await fetch('/api/manager-controls/my-department', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    departmentData = data.data;
+                    
+                    document.getElementById('departmentTitle').textContent = `${departmentData.name} - Manager Dashboard`;
+                    document.getElementById('totalEmployees').textContent = departmentData.employees?.length || 0;
+                    document.getElementById('totalMachines').textContent = departmentData.machines?.length || 0;
+                    
+                    populateEmployeeSelect();
+                    populateMachineSelect();
+                    loadAllocations();
+                    loadDepartmentStats();
+                } else {
+                    showAlert(data.message || 'Failed to load department data', 'danger');
+                }
+            } catch (error) {
+                console.error('Error loading department data:', error);
+                showAlert('Failed to load department data', 'danger');
+            }
+        }
+        
+        function populateEmployeeSelect() {
+            const selects = [document.getElementById('employeeId'), document.getElementById('assignEmployee')];
+            
+            selects.forEach(select => {
+                select.innerHTML = '<option value="">Select Employee</option>';
+                departmentData.employees?.forEach(emp => {
+                    const option = document.createElement('option');
+                    option.value = emp.id;
+                    option.textContent = `${emp.first_name} ${emp.last_name} (${emp.employee_number})`;
+                    select.appendChild(option);
+                });
+            });
+        }
+        
+        function populateMachineSelect() {
+            const selects = [document.getElementById('machineId'), document.getElementById('assignMachine')];
+            
+            selects.forEach(select => {
+                select.innerHTML = '<option value="">Select Machine</option>';
+                departmentData.machines?.forEach(machine => {
+                    const option = document.createElement('option');
+                    option.value = machine.id;
+                    option.textContent = `${machine.machine_name} (${machine.machine_number})`;
+                    select.appendChild(option);
+                });
+            });
+        }
+        
+        async function loadAllocations() {
+            try {
+                const response = await fetch('/api/manager-controls/employee-machine-allocations', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const tbody = document.getElementById('allocationsTable');
+                    tbody.innerHTML = data.data.map(allocation => `
+                        <tr>
+                            <td>${allocation.employee_name} (${allocation.employee_number})</td>
+                            <td>${allocation.machine_name} (${allocation.machine_number})</td>
+                            <td>${allocation.allocation_type}</td>
+                            <td>${allocation.start_date}</td>
+                            <td>${allocation.end_date || 'N/A'}</td>
+                            <td>${createStatusBadge(allocation.is_active ? 'active' : 'inactive')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="editAllocation(${allocation.id})">Edit</button>
+                                <button class="btn btn-sm ${allocation.is_active ? 'btn-warning' : 'btn-success'}" onclick="toggleAllocation(${allocation.id}, ${allocation.is_active})">${allocation.is_active ? 'Deactivate' : 'Activate'}</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading allocations:', error);
+                showAlert('Failed to load allocations', 'danger');
+            }
+        }
+        
+        async function loadDepartmentStats() {
+            try {
+                const response = await fetch('/api/manager-controls/department-stats', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.data;
+                    document.getElementById('activeJobs').textContent = stats.active_jobs || 0;
+                    document.getElementById('pendingJobs').textContent = stats.pending_jobs || 0;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        async function loadDepartmentJobs() {
+            try {
+                const response = await fetch('/api/manager-controls/department-jobs', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    departmentJobs = data.data;
+                    const tbody = document.getElementById('jobsTable');
+                    tbody.innerHTML = data.data.map(job => `
+                        <tr>
+                            <td>${job.id}</td>
+                            <td>${job.order_number}</td>
+                            <td>${job.product_name}</td>
+                            <td>${job.stage_name || 'N/A'}</td>
+                            <td>${job.assigned_employee_name || 'Unassigned'}</td>
+                            <td>${job.machine_name || 'N/A'}</td>
+                            <td>${job.scheduled_date}</td>
+                            <td>${createStatusBadge(job.status)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="reassignJob(${job.id})">Reassign</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                    
+                    const jobSelect = document.getElementById('jobSelect');
+                    jobSelect.innerHTML = '<option value="">Select Job</option>';
+                    data.data.forEach(job => {
+                        const option = document.createElement('option');
+                        option.value = job.id;
+                        option.textContent = `Job #${job.id} - ${job.order_number} (${job.status})`;
+                        option.dataset.job = JSON.stringify(job);
+                        jobSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading jobs:', error);
+                showAlert('Failed to load jobs', 'danger');
+            }
+        }
+        
+        async function loadDepartmentOverview() {
+            if (!departmentData) return;
+            
+            const employeesList = document.getElementById('employeesList');
+            employeesList.innerHTML = departmentData.employees?.map(emp => `
+                <div style="padding: 0.5rem; border-bottom: 1px solid var(--color-border);">
+                    <strong>${emp.first_name} ${emp.last_name}</strong><br>
+                    <small>${emp.employee_number} - ${emp.employee_type || 'N/A'}</small>
+                </div>
+            `).join('') || 'No employees';
+            
+            const machinesList = document.getElementById('machinesList');
+            machinesList.innerHTML = departmentData.machines?.map(machine => `
+                <div style="padding: 0.5rem; border-bottom: 1px solid var(--color-border);">
+                    <strong>${machine.machine_name}</strong><br>
+                    <small>${machine.machine_number} - ${createStatusBadge(machine.status)}</small>
+                </div>
+            `).join('') || 'No machines';
+            
+            const stagesList = document.getElementById('stagesList');
+            stagesList.innerHTML = departmentData.production_stages?.map(stage => `
+                <div style="padding: 0.5rem; border-bottom: 1px solid var(--color-border);">
+                    <strong>${stage.stage_name}</strong> (Order: ${stage.stage_order})<br>
+                    <small>${stage.description || 'No description'}</small>
+                </div>
+            `).join('') || 'No production stages';
+        }
+        
+        function loadJobDetails() {
+            const select = document.getElementById('jobSelect');
+            const selectedOption = select.options[select.selectedIndex];
+            
+            if (selectedOption.value) {
+                const job = JSON.parse(selectedOption.dataset.job);
+                document.getElementById('jobDetails').style.display = 'block';
+                document.getElementById('jobOrderNumber').textContent = job.order_number;
+                document.getElementById('jobProductName').textContent = job.product_name;
+                document.getElementById('jobCurrentStatus').textContent = job.status;
+                document.getElementById('jobId').value = job.id;
+            } else {
+                document.getElementById('jobDetails').style.display = 'none';
+            }
+        }
+        
+        document.getElementById('allocationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const allocationData = {
+                employee_id: document.getElementById('employeeId').value,
+                machine_id: document.getElementById('machineId').value,
+                allocation_type: document.getElementById('allocationType').value,
+                start_date: document.getElementById('startDate').value,
+                end_date: document.getElementById('endDate').value || null,
+                notes: document.getElementById('allocationNotes').value
+            };
+            
+            try {
+                const response = await fetch('/api/manager-controls/employee-machine-allocations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(allocationData)
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Employee allocated successfully', 'success');
+                    hideModal('addAllocationModal');
+                    document.getElementById('allocationForm').reset();
+                    loadAllocations();
+                } else {
+                    showAlert(data.message || 'Failed to allocate employee', 'danger');
+                }
+            } catch (error) {
+                console.error('Error allocating employee:', error);
+                showAlert('Failed to allocate employee', 'danger');
+            }
+        });
+        
+        async function editAllocation(id) {
+            try {
+                const response = await fetch('/api/manager-controls/employee-machine-allocations', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const allocation = data.data.find(a => a.id === id);
+                    if (allocation) {
+                        document.getElementById('editAllocationId').value = allocation.id;
+                        document.getElementById('editAllocationType').value = allocation.allocation_type;
+                        document.getElementById('editStartDate').value = allocation.start_date;
+                        document.getElementById('editEndDate').value = allocation.end_date || '';
+                        document.getElementById('editIsActive').value = allocation.is_active ? 'true' : 'false';
+                        document.getElementById('editAllocationNotes').value = allocation.notes || '';
+                        
+                        showModal('editAllocationModal');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading allocation:', error);
+                showAlert('Failed to load allocation', 'danger');
+            }
+        }
+        
+        document.getElementById('editAllocationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const allocationId = document.getElementById('editAllocationId').value;
+            const allocationData = {
+                allocation_type: document.getElementById('editAllocationType').value,
+                start_date: document.getElementById('editStartDate').value,
+                end_date: document.getElementById('editEndDate').value || null,
+                is_active: document.getElementById('editIsActive').value === 'true',
+                notes: document.getElementById('editAllocationNotes').value
+            };
+            
+            try {
+                const response = await fetch(`/api/manager-controls/employee-machine-allocations/${allocationId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(allocationData)
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Allocation updated successfully', 'success');
+                    hideModal('editAllocationModal');
+                    loadAllocations();
+                } else {
+                    showAlert(data.message || 'Failed to update allocation', 'danger');
+                }
+            } catch (error) {
+                console.error('Error updating allocation:', error);
+                showAlert('Failed to update allocation', 'danger');
+            }
+        });
+        
+        async function toggleAllocation(id, currentStatus) {
+            try {
+                const response = await fetch(`/api/manager-controls/employee-machine-allocations/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ is_active: !currentStatus })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(`Allocation ${!currentStatus ? 'activated' : 'deactivated'} successfully`, 'success');
+                    loadAllocations();
+                } else {
+                    showAlert(data.message || 'Failed to update allocation', 'danger');
+                }
+            } catch (error) {
+                console.error('Error toggling allocation:', error);
+                showAlert('Failed to update allocation', 'danger');
+            }
+        }
+        
+        function reassignJob(jobId) {
+            const job = departmentJobs.find(j => j.id === jobId);
+            if (job) {
+                document.getElementById('jobSelect').value = jobId;
+                loadJobDetails();
+                showModal('assignJobModal');
+            }
+        }
+        
+        document.getElementById('assignJobForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const jobId = document.getElementById('jobSelect').value;
+            const assignData = {
+                assigned_employee_id: document.getElementById('assignEmployee').value,
+                machine_id: document.getElementById('assignMachine').value,
+                scheduled_date: document.getElementById('scheduledDate').value
+            };
+            
+            try {
+                const response = await fetch(`/api/manager-controls/assign-job/${jobId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(assignData)
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Job assigned successfully', 'success');
+                    hideModal('assignJobModal');
+                    document.getElementById('assignJobForm').reset();
+                    loadDepartmentJobs();
+                } else {
+                    showAlert(data.message || 'Failed to assign job', 'danger');
+                }
+            } catch (error) {
+                console.error('Error assigning job:', error);
+                showAlert('Failed to assign job', 'danger');
+            }
+        });
+        
+        loadDepartmentData();
+    </script>
+</body>
+</html>

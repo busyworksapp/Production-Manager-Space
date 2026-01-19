@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preventive Maintenance - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/maintenance/tickets" class="nav-link">Tickets</a>
+                <a href="/maintenance/preventive" class="nav-link active">Preventive</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Preventive Maintenance Schedules</h1>
+            <button class="btn btn-primary" onclick="showModal('addScheduleModal')">Create Schedule</button>
+        </div>
+
+        <div class="card" style="margin-bottom: 1rem;">
+            <div class="grid grid-4">
+                <div class="form-group">
+                    <label class="form-label" for="filterDepartment">Department</label>
+                    <select id="filterDepartment" class="form-select" onchange="filterSchedules()">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="filterMachine">Machine</label>
+                    <select id="filterMachine" class="form-select" onchange="filterSchedules()">
+                        <option value="">All Machines</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="filterPriority">Priority</label>
+                    <select id="filterPriority" class="form-select" onchange="filterSchedules()">
+                        <option value="">All Priorities</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="filterStatus">Status</label>
+                    <select id="filterStatus" class="form-select" onchange="filterSchedules()">
+                        <option value="">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">Upcoming Maintenance</div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Schedule Name</th>
+                        <th>Machine</th>
+                        <th>Department</th>
+                        <th>Type</th>
+                        <th>Frequency</th>
+                        <th>Last Performed</th>
+                        <th>Next Due</th>
+                        <th>Priority</th>
+                        <th>Technician</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="schedulesTable">
+                    <tr><td colspan="10" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Maintenance Logs</div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Schedule</th>
+                        <th>Performed At</th>
+                        <th>Performed By</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Next Recommended</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTable">
+                    <tr><td colspan="7" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addScheduleModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">Create Preventive Maintenance Schedule</div>
+            <form id="scheduleForm">
+                <div class="form-group">
+                    <label class="form-label" for="scheduleName">Schedule Name*</label>
+                    <input type="text" id="scheduleName" class="form-input" required>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="machineId">Machine*</label>
+                        <select id="machineId" class="form-select" required></select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="maintenanceType">Maintenance Type*</label>
+                        <input type="text" id="maintenanceType" class="form-input" required placeholder="e.g., Oil Change, Filter Replacement">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="description">Description</label>
+                    <textarea id="description" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="frequencyType">Frequency Type*</label>
+                        <select id="frequencyType" class="form-select" required>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="hours_based">Hours Based</option>
+                            <option value="cycles_based">Cycles Based</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="frequencyValue">Frequency Value*</label>
+                        <input type="number" id="frequencyValue" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="estimatedDuration">Estimated Duration (Minutes)</label>
+                        <input type="number" id="estimatedDuration" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="priority">Priority*</label>
+                        <select id="priority" class="form-select" required>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="assignedTechnician">Assigned Technician</label>
+                    <select id="assignedTechnician" class="form-select"></select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="checklist">Checklist (JSON)</label>
+                    <textarea id="checklist" class="form-textarea" placeholder='["Check oil level", "Inspect belts", "Clean filters"]'></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="partsRequired">Parts Required (JSON)</label>
+                    <textarea id="partsRequired" class="form-textarea" placeholder='["Oil Filter", "Air Filter"]'></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="isActive" checked> Active
+                    </label>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addScheduleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="performMaintenanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Log Maintenance Performed</div>
+            <form id="performMaintenanceForm">
+                <input type="hidden" id="performScheduleId">
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="performedAt">Performed At*</label>
+                        <input type="datetime-local" id="performedAt" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="durationMinutes">Duration (Minutes)*</label>
+                        <input type="number" id="durationMinutes" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="checklistResults">Checklist Results (JSON)</label>
+                    <textarea id="checklistResults" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="partsUsed">Parts Used (JSON)</label>
+                    <textarea id="partsUsed" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="observations">Observations</label>
+                    <textarea id="observations" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="status">Status*</label>
+                    <select id="status" class="form-select" required>
+                        <option value="completed">Completed</option>
+                        <option value="partially_completed">Partially Completed</option>
+                        <option value="skipped">Skipped</option>
+                        <option value="rescheduled">Rescheduled</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="nextRecommendedDate">Next Recommended Date</label>
+                    <input type="date" id="nextRecommendedDate" class="form-input">
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('performMaintenanceModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/preventive.js"></script>
+</body>
+</html>

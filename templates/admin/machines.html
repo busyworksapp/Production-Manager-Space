@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Machines - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/admin/departments" class="nav-link active">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Machinery Management</h1>
+            <button class="btn btn-primary" onclick="showModal('addMachineModal')">Add Machine</button>
+        </div>
+
+        <div class="card" style="margin-bottom: 1rem;">
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label" for="filterDepartment">Filter by Department</label>
+                    <select id="filterDepartment" class="form-select" onchange="filterMachines()">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="filterStatus">Filter by Status</label>
+                    <select id="filterStatus" class="form-select" onchange="filterMachines()">
+                        <option value="">All Statuses</option>
+                        <option value="available">Available</option>
+                        <option value="in_use">In Use</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="broken">Broken</option>
+                        <option value="retired">Retired</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="searchMachine">Search</label>
+                    <input type="text" id="searchMachine" class="form-input" placeholder="Search by name or number..." oninput="filterMachines()">
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Machine Number</th>
+                        <th>Machine Name</th>
+                        <th>Department</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Manufacturer</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="machinesTable">
+                    <tr><td colspan="7" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addMachineModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Add Machine</div>
+            <form id="machineForm">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="machineNumber">Machine Number*</label>
+                        <input type="text" id="machineNumber" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="machineName">Machine Name*</label>
+                        <input type="text" id="machineName" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="department">Department*</label>
+                        <select id="department" class="form-select" required></select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="machineType">Machine Type</label>
+                        <input type="text" id="machineType" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="manufacturer">Manufacturer</label>
+                        <input type="text" id="manufacturer" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="model">Model</label>
+                        <input type="text" id="model" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="serialNumber">Serial Number</label>
+                        <input type="text" id="serialNumber" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="purchaseDate">Purchase Date</label>
+                        <input type="date" id="purchaseDate" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="status">Status*</label>
+                    <select id="status" class="form-select" required>
+                        <option value="available">Available</option>
+                        <option value="in_use">In Use</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="broken">Broken</option>
+                        <option value="retired">Retired</option>
+                    </select>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addMachineModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Machine</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editMachineModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Machine</div>
+            <form id="editMachineForm">
+                <input type="hidden" id="editMachineId">
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="editMachineNumber">Machine Number*</label>
+                        <input type="text" id="editMachineNumber" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="editMachineName">Machine Name*</label>
+                        <input type="text" id="editMachineName" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="editDepartment">Department*</label>
+                        <select id="editDepartment" class="form-select" required></select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="editMachineType">Machine Type</label>
+                        <input type="text" id="editMachineType" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="editManufacturer">Manufacturer</label>
+                        <input type="text" id="editManufacturer" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="editModel">Model</label>
+                        <input type="text" id="editModel" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="editSerialNumber">Serial Number</label>
+                        <input type="text" id="editSerialNumber" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="editPurchaseDate">Purchase Date</label>
+                        <input type="date" id="editPurchaseDate" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="editStatus">Status*</label>
+                    <select id="editStatus" class="form-select" required>
+                        <option value="available">Available</option>
+                        <option value="in_use">In Use</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="broken">Broken</option>
+                        <option value="retired">Retired</option>
+                    </select>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('editMachineModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Machine</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/machines.js"></script>
+</body>
+</html>

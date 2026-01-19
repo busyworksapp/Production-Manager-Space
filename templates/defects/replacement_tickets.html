@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Replacement Tickets - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link active">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Replacement Tickets</h1>
+            <button class="btn btn-primary" onclick="showModal('addTicketModal')">Create Ticket</button>
+        </div>
+        
+        <div class="card" style="margin-bottom: 1rem;">
+            <select id="statusFilter" class="form-select" style="max-width: 200px;" onchange="loadTickets()">
+                <option value="">All Statuses</option>
+                <option value="pending_approval">Pending Approval</option>
+                <option value="approved">Approved</option>
+                <option value="replacement_processed">Replacement Processed</option>
+                <option value="no_stock">No Stock</option>
+            </select>
+        </div>
+        
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ticket #</th>
+                        <th>Order</th>
+                        <th>Customer</th>
+                        <th>Department</th>
+                        <th>Quantity</th>
+                        <th>Rejection Type</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketsTable">
+                    <tr><td colspan="8" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addTicketModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Create Replacement Ticket</div>
+            <form id="ticketForm">
+                <div class="form-group">
+                    <label class="form-label" for="orderNumber">Order Number*</label>
+                    <input type="text" id="orderNumber" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="quantityRejected">Quantity Rejected*</label>
+                    <input type="number" id="quantityRejected" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="rejectionType">Rejection Type*</label>
+                    <select id="rejectionType" class="form-select" required>
+                        <option value="material">Material</option>
+                        <option value="workmanship">Workmanship</option>
+                        <option value="machine">Machine</option>
+                        <option value="design">Design</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="rejectionReason">Rejection Reason*</label>
+                    <textarea id="rejectionReason" class="form-textarea" required></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addTicketModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script>
+        async function loadTickets() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('username').textContent = `${user.first_name} ${user.last_name}`;
+            }
+            
+            const status = document.getElementById('statusFilter').value;
+            const params = status ? { status } : {};
+            
+            try {
+                const response = await API.defects.getReplacementTickets(params);
+                
+                if (response.success) {
+                    const tbody = document.getElementById('ticketsTable');
+                    tbody.innerHTML = response.data.map(ticket => `
+                        <tr>
+                            <td>${ticket.ticket_number}</td>
+                            <td>${ticket.order_number}</td>
+                            <td>${ticket.customer_name}</td>
+                            <td>${ticket.department_name}</td>
+                            <td>${ticket.quantity_rejected}</td>
+                            <td>${ticket.rejection_type}</td>
+                            <td>${createStatusBadge(ticket.status)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="viewTicket(${ticket.id})">View</button>
+                                ${ticket.status === 'pending_approval' ? 
+                                    `<button class="btn btn-sm btn-success" onclick="approveTicket(${ticket.id})">Approve</button>` :
+                                    ''}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading tickets:', error);
+                showAlert('Failed to load tickets', 'danger');
+            }
+        }
+        
+        async function approveTicket(id) {
+            if (confirm('Are you sure you want to approve this replacement ticket?')) {
+                try {
+                    const response = await API.defects.approveReplacementTicket(id);
+                    if (response.success) {
+                        showAlert('Ticket approved successfully', 'success');
+                        loadTickets();
+                    }
+                } catch (error) {
+                    showAlert(error.message || 'Failed to approve ticket', 'danger');
+                }
+            }
+        }
+        
+        loadTickets();
+    </script>
+</body>
+</html>

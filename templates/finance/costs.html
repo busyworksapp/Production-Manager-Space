@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cost Models - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/finance/bom" class="nav-link">BOM</a>
+                <a href="/finance/costs" class="nav-link active">Costs</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h1>Cost Models</h1>
+        
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div class="card-header" style="margin: 0;">Labor Cost Models</div>
+                <button class="btn btn-primary" onclick="showModal('addLaborCostModal')">Add Labor Cost</button>
+            </div>
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Position</th>
+                        <th>Hourly Rate</th>
+                        <th>Overtime Rate</th>
+                        <th>Benefits %</th>
+                        <th>Effective From</th>
+                        <th>Effective To</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="laborCostsTable">
+                    <tr><td colspan="9" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div class="card-header" style="margin: 0;">Overhead Cost Models</div>
+                <button class="btn btn-primary" onclick="showModal('addOverheadCostModal')">Add Overhead Cost</button>
+            </div>
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Category</th>
+                        <th>Cost Type</th>
+                        <th>Allocation Method</th>
+                        <th>Cost Amount</th>
+                        <th>Effective From</th>
+                        <th>Effective To</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="overheadCostsTable">
+                    <tr><td colspan="9" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Production Cost Tracking</div>
+            <div class="grid grid-3" style="margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="filterOrder">Order Number</label>
+                    <input type="text" id="filterOrder" class="form-input" placeholder="Search order..." oninput="filterProductionCosts()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="startDate">From Date</label>
+                    <input type="date" id="startDate" class="form-input" onchange="filterProductionCosts()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="endDate">To Date</label>
+                    <input type="date" id="endDate" class="form-input" onchange="filterProductionCosts()">
+                </div>
+            </div>
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order Number</th>
+                        <th>Material Cost</th>
+                        <th>Labor Cost</th>
+                        <th>Overhead Cost</th>
+                        <th>Total Cost</th>
+                        <th>Calculated At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productionCostsTable">
+                    <tr><td colspan="7" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addLaborCostModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Add Labor Cost Model</div>
+            <form id="laborCostForm">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="departmentId">Department*</label>
+                        <select id="departmentId" class="form-select" required></select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="position">Position*</label>
+                        <input type="text" id="position" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="hourlyRate">Hourly Rate*</label>
+                        <input type="number" id="hourlyRate" class="form-input" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="overtimeRate">Overtime Rate</label>
+                        <input type="number" id="overtimeRate" class="form-input" step="0.01">
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="benefitsPercentage">Benefits Percentage</label>
+                        <input type="number" id="benefitsPercentage" class="form-input" step="0.01">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="effectiveFrom">Effective From*</label>
+                        <input type="date" id="effectiveFrom" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="effectiveTo">Effective To</label>
+                    <input type="date" id="effectiveTo" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="isActive" checked> Active
+                    </label>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addLaborCostModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Labor Cost</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addOverheadCostModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Add Overhead Cost Model</div>
+            <form id="overheadCostForm">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="overheadDepartmentId">Department*</label>
+                        <select id="overheadDepartmentId" class="form-select" required></select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="costCategory">Cost Category*</label>
+                        <input type="text" id="costCategory" class="form-input" required placeholder="e.g., Utilities, Rent">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="costDescription">Description</label>
+                    <textarea id="costDescription" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="costType">Cost Type*</label>
+                        <select id="costType" class="form-select" required>
+                            <option value="fixed">Fixed</option>
+                            <option value="variable">Variable</option>
+                            <option value="semi_variable">Semi-Variable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="allocationMethod">Allocation Method*</label>
+                        <select id="allocationMethod" class="form-select" required>
+                            <option value="per_unit">Per Unit</option>
+                            <option value="per_hour">Per Hour</option>
+                            <option value="percentage">Percentage</option>
+                            <option value="fixed_monthly">Fixed Monthly</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="costAmount">Cost Amount*</label>
+                        <input type="number" id="costAmount" class="form-input" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="overheadEffectiveFrom">Effective From*</label>
+                        <input type="date" id="overheadEffectiveFrom" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="overheadEffectiveTo">Effective To</label>
+                    <input type="date" id="overheadEffectiveTo" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="overheadIsActive" checked> Active
+                    </label>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addOverheadCostModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Overhead Cost</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewCostDetailsModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">Production Cost Details</div>
+            <div id="costDetails"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('viewCostDetailsModal')">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/costs.js"></script>
+</body>
+</html>

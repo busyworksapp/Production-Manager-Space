@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Planning & Scheduling - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Orders</a>
+                <a href="/planning/schedule" class="nav-link active">Schedule</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h1>Job Planning & Scheduling</h1>
+        
+        <div class="card">
+            <div class="card-header">Filters</div>
+            <div class="grid grid-4">
+                <div class="form-group">
+                    <label class="form-label" for="filterDepartment">Department</label>
+                    <select id="filterDepartment" class="form-select" onchange="loadSchedule()">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="filterStatus">Status</label>
+                    <select id="filterStatus" class="form-select" onchange="loadSchedule()">
+                        <option value="">All</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="on_hold">On Hold</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="startDate">Start Date</label>
+                    <input type="date" id="startDate" class="form-input" onchange="loadSchedule()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="endDate">End Date</label>
+                    <input type="date" id="endDate" class="form-input" onchange="loadSchedule()">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Department Capacity Overview</div>
+            <div id="capacityOverview" class="grid grid-3"></div>
+        </div>
+        
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div class="card-header" style="margin: 0;">Scheduled Jobs</div>
+                <button class="btn btn-primary" onclick="showModal('scheduleJobModal')">Schedule New Job</button>
+            </div>
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Order Number</th>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Department</th>
+                        <th>Stage</th>
+                        <th>Machine</th>
+                        <th>Operator</th>
+                        <th>Qty</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleTable">
+                    <tr><td colspan="11" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="scheduleJobModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Schedule Job</div>
+            <form id="scheduleJobForm">
+                <div class="form-group">
+                    <label class="form-label" for="orderId">Order*</label>
+                    <select id="orderId" class="form-select" required onchange="loadOrderDetails()"></select>
+                </div>
+                
+                <div id="orderDetails" style="display: none; background: var(--color-bg-main); padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1rem;">
+                    <strong>Order Details:</strong>
+                    <p id="orderDetailsContent"></p>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="departmentId">Department*</label>
+                        <select id="departmentId" class="form-select" required onchange="loadStagesAndMachines()"></select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="stageId">Production Stage</label>
+                        <select id="stageId" class="form-select"></select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="scheduledDate">Scheduled Date*</label>
+                        <input type="date" id="scheduledDate" class="form-input" required onchange="validateCapacity()">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="scheduledQuantity">Quantity*</label>
+                        <input type="number" id="scheduledQuantity" class="form-input" required onchange="validateCapacity()">
+                    </div>
+                </div>
+                
+                <div id="capacityValidation" class="alert" style="display: none;"></div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="machineId">Machine</label>
+                        <select id="machineId" class="form-select"></select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="assignedEmployeeId">Assigned Operator</label>
+                        <select id="assignedEmployeeId" class="form-select"></select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="notes">Notes</label>
+                    <textarea id="notes" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('scheduleJobModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Schedule Job</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="suggestAlternativeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Suggested Alternative Orders</div>
+            <p>The following unscheduled orders can replace the on-hold job to maintain production targets:</p>
+            <div id="alternativeOrdersList"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('suggestAlternativeModal')">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/planning.js"></script>
+</body>
+</html>

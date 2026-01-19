@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roles & Permissions - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/admin/departments" class="nav-link active">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Roles & Permissions</h1>
+            <button class="btn btn-primary" onclick="showModal('addRoleModal')">Add Role</button>
+        </div>
+        
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Role Name</th>
+                        <th>Description</th>
+                        <th>Users Count</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="rolesTable">
+                    <tr><td colspan="6" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addRoleModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">Add Role</div>
+            <form id="roleForm">
+                <div class="form-group">
+                    <label class="form-label" for="roleName">Role Name*</label>
+                    <input type="text" id="roleName" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="description">Description</label>
+                    <textarea id="description" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="isActive" checked> Active
+                    </label>
+                </div>
+                
+                <hr style="margin: 1.5rem 0;">
+                
+                <div class="card-header">Permissions</div>
+                
+                <div id="permissionsContainer">
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <strong>Planning Module</strong>
+                            <label><input type="checkbox" class="permission-check" data-module="planning" data-perm="read"> View</label>
+                            <label><input type="checkbox" class="permission-check" data-module="planning" data-perm="write"> Create/Edit</label>
+                            <label><input type="checkbox" class="permission-check" data-module="planning" data-perm="schedule"> Schedule</label>
+                            <label><input type="checkbox" class="permission-check" data-module="planning" data-perm="delete"> Delete</label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <strong>Defects Module</strong>
+                            <label><input type="checkbox" class="permission-check" data-module="defects" data-perm="read"> View</label>
+                            <label><input type="checkbox" class="permission-check" data-module="defects" data-perm="write"> Create/Edit</label>
+                            <label><input type="checkbox" class="permission-check" data-module="defects" data-perm="approve"> Approve</label>
+                            <label><input type="checkbox" class="permission-check" data-module="defects" data-perm="delete"> Delete</label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <strong>SOP & NCR Module</strong>
+                            <label><input type="checkbox" class="permission-check" data-module="sop" data-perm="read"> View</label>
+                            <label><input type="checkbox" class="permission-check" data-module="sop" data-perm="write"> Create/Edit</label>
+                            <label><input type="checkbox" class="permission-check" data-module="sop" data-perm="approve"> Approve</label>
+                            <label><input type="checkbox" class="permission-check" data-module="sop" data-perm="reassign"> Reassign</label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <strong>Maintenance Module</strong>
+                            <label><input type="checkbox" class="permission-check" data-module="maintenance" data-perm="read"> View</label>
+                            <label><input type="checkbox" class="permission-check" data-module="maintenance" data-perm="write"> Create/Edit</label>
+                            <label><input type="checkbox" class="permission-check" data-module="maintenance" data-perm="assign"> Assign</label>
+                            <label><input type="checkbox" class="permission-check" data-module="maintenance" data-perm="delete"> Delete</label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <strong>Finance Module</strong>
+                            <label><input type="checkbox" class="permission-check" data-module="finance" data-perm="read"> View</label>
+                            <label><input type="checkbox" class="permission-check" data-module="finance" data-perm="write"> Create/Edit</label>
+                            <label><input type="checkbox" class="permission-check" data-module="finance" data-perm="approve"> Approve</label>
+                            <label><input type="checkbox" class="permission-check" data-module="finance" data-perm="delete"> Delete</label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <strong>Admin Module</strong>
+                            <label><input type="checkbox" class="permission-check" data-module="admin" data-perm="read"> View</label>
+                            <label><input type="checkbox" class="permission-check" data-module="admin" data-perm="write"> Create/Edit</label>
+                            <label><input type="checkbox" class="permission-check" data-module="admin" data-perm="manage_users"> Manage Users</label>
+                            <label><input type="checkbox" class="permission-check" data-module="admin" data-perm="manage_roles"> Manage Roles</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addRoleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editRoleModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">Edit Role</div>
+            <form id="editRoleForm">
+                <input type="hidden" id="editRoleId">
+                
+                <div class="form-group">
+                    <label class="form-label" for="editRoleName">Role Name*</label>
+                    <input type="text" id="editRoleName" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="editDescription">Description</label>
+                    <textarea id="editDescription" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="editIsActive"> Active
+                    </label>
+                </div>
+                
+                <hr style="margin: 1.5rem 0;">
+                
+                <div class="card-header">Permissions</div>
+                
+                <div id="editPermissionsContainer"></div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('editRoleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/roles.js"></script>
+</body>
+</html>

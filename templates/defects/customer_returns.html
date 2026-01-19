@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Returns - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Internal Rejects</a>
+                <a href="/defects/customer-returns" class="nav-link active">Customer Returns</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge" style="display: none;">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Customer Returns</h1>
+            <button class="btn btn-primary" onclick="showModal('addReturnModal')">Record Return</button>
+        </div>
+
+        <div class="card" style="margin-bottom: 1rem;">
+            <div class="grid grid-4">
+                <div class="form-group">
+                    <label class="form-label" for="filterReturnType">Return Type</label>
+                    <select id="filterReturnType" class="form-select" onchange="filterReturns()">
+                        <option value="">All Types</option>
+                        <option value="defect">Defect</option>
+                        <option value="wrong_item">Wrong Item</option>
+                        <option value="damage">Damage</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="startDate">From Date</label>
+                    <input type="date" id="startDate" class="form-input" onchange="filterReturns()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="endDate">To Date</label>
+                    <input type="date" id="endDate" class="form-input" onchange="filterReturns()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="searchReturn">Search</label>
+                    <input type="text" id="searchReturn" class="form-input" placeholder="Order or return number..." oninput="filterReturns()">
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Return Number</th>
+                        <th>Return Date</th>
+                        <th>Order Number</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Return Type</th>
+                        <th>Return Reason</th>
+                        <th>Recorded By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="returnsTable">
+                    <tr><td colspan="9" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="addReturnModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Record Customer Return</div>
+            <form id="returnForm">
+                <div class="form-group">
+                    <label class="form-label" for="returnNumber">Return Number*</label>
+                    <input type="text" id="returnNumber" class="form-input" required>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="orderId">Order*</label>
+                        <select id="orderId" class="form-select" required onchange="loadOrderProducts()"></select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="productId">Product</label>
+                        <select id="productId" class="form-select"></select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="quantityReturned">Quantity Returned*</label>
+                        <input type="number" id="quantityReturned" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="returnDate">Return Date*</label>
+                        <input type="date" id="returnDate" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="returnType">Return Type*</label>
+                    <select id="returnType" class="form-select" required>
+                        <option value="">Select Type</option>
+                        <option value="defect">Defect</option>
+                        <option value="wrong_item">Wrong Item</option>
+                        <option value="damage">Damage</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="returnReason">Return Reason*</label>
+                    <textarea id="returnReason" class="form-textarea" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="customerComplaint">Customer Complaint</label>
+                    <textarea id="customerComplaint" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="notes">Notes</label>
+                    <textarea id="notes" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addReturnModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Return</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewReturnModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Return Details</div>
+            <div id="returnDetails"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('viewReturnModal')">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/defects.js"></script>
+</body>
+</html>

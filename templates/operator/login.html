@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Login - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #1F618D 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-md);
+        }
+        .login-container {
+            background-color: white;
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-logo {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--color-primary);
+            margin-bottom: 0.5rem;
+        }
+        .login-subtitle {
+            color: var(--color-text-secondary);
+            font-size: 1.1rem;
+        }
+        .employee-number-input {
+            font-size: 1.5rem;
+            text-align: center;
+            padding: 1.25rem;
+            border: 2px solid var(--color-border);
+            border-radius: var(--border-radius);
+            width: 100%;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+        .employee-number-input:focus {
+            border-color: var(--color-primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        .login-btn {
+            width: 100%;
+            min-height: 60px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            background-color: var(--color-success);
+            border: none;
+            border-radius: var(--border-radius);
+            color: white;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: all 0.2s;
+        }
+        .login-btn:hover {
+            background-color: #1E8449;
+        }
+        .login-btn:active {
+            transform: scale(0.98);
+        }
+        .login-btn:disabled {
+            background-color: var(--color-border);
+            cursor: not-allowed;
+        }
+        .info-text {
+            text-align: center;
+            color: var(--color-text-secondary);
+            font-size: 0.9rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-border);
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .alert-danger {
+            background-color: #FADBD8;
+            color: #A93226;
+            border: 1px solid #E74C3C;
+        }
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 1.5rem;
+            }
+            .login-logo {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-logo">PMS</div>
+            <div class="login-subtitle">Operator Access</div>
+        </div>
+        
+        <div id="errorMessage" style="display: none;"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label" for="employeeNumber" style="font-size: 1.1rem; font-weight: 600;">Employee Number</label>
+                <input 
+                    type="text" 
+                    id="employeeNumber" 
+                    class="employee-number-input touch-optimized" 
+                    placeholder="Enter your employee number" 
+                    required 
+                    autofocus
+                    autocomplete="off"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                >
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">
+                Login
+            </button>
+        </form>
+        
+        <div class="info-text">
+            <strong>Instructions:</strong><br>
+            Enter your employee number to access your jobs.<br>
+            Your employee number is your password.
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const employeeNumber = document.getElementById('employeeNumber').value.trim();
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            if (!employeeNumber) {
+                showError('Please enter your employee number');
+                return;
+            }
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            errorMessage.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/operator/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        employee_number: employeeNumber
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('auth_token', data.data.token);
+                    localStorage.setItem('user', JSON.stringify({
+                        id: data.data.employee.id,
+                        name: data.data.employee.name,
+                        employee_type: data.data.employee.employee_type,
+                        department_id: data.data.employee.department_id,
+                        department_name: data.data.employee.department_name,
+                        role: 'operator'
+                    }));
+                    
+                    window.location.href = '/operator/dashboard';
+                } else {
+                    showError(data.message || 'Login failed. Please check your employee number.');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('Unable to connect to the server. Please try again.');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        });
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.className = 'alert alert-danger';
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        document.getElementById('employeeNumber').addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+</body>
+</html>
