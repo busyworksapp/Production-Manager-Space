@@ -248,11 +248,12 @@ class WhatsAppService:
     def get_session(self, phone: str) -> Optional[Dict[str, Any]]:
         try:
             conn = get_db_connection()
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             
             cursor.execute("""
                 SELECT * FROM whatsapp_sessions 
-                WHERE phone_number = %s AND (expires_at IS NULL OR expires_at > NOW())
+                WHERE phone_number = %s 
+                AND (expires_at IS NULL OR expires_at > NOW())
                 ORDER BY created_at DESC LIMIT 1
             """, (phone,))
             
@@ -260,8 +261,13 @@ class WhatsAppService:
             cursor.close()
             conn.close()
             
-            if result and result.get('context_data'):
-                result['context_data'] = json.loads(result['context_data']) if isinstance(result['context_data'], str) else result['context_data']
+            if (
+                result
+                and result.get('context_data')
+            ):
+                context_data = result['context_data']
+                if isinstance(context_data, str):
+                    result['context_data'] = json.loads(context_data)
             
             return result
         except Exception as e:
