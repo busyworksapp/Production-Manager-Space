@@ -104,6 +104,36 @@ class WhatsAppFlowHandler:
             ):
                 return self._show_main_menu(phone, session)
             
+            # Handle numeric menu selections (1-5)
+            menu_selection_map = {
+                '1': 'reject',
+                '2': 'return',
+                '3': 'sop_failure',
+                '4': 'track',
+                '5': 'pull_data'
+            }
+            
+            if message_lower in menu_selection_map:
+                flow_name = menu_selection_map[message_lower]
+                if flow_name in self.flow_handlers:
+                    app_logger.info(
+                        f"User {phone} selected flow: {flow_name}"
+                    )
+                    whatsapp_service.update_session(
+                        session['id'],
+                        state='awaiting_input',
+                        flow=flow_name,
+                        context={}
+                    )
+                    # Call the flow handler
+                    return self.flow_handlers[flow_name](
+                        phone,
+                        session,
+                        None,
+                        'text',
+                        {}
+                    )
+            
             if (
                 session.get('current_flow')
                 and session.get('session_state') == 'awaiting_input'
@@ -182,27 +212,36 @@ class WhatsAppFlowHandler:
         step = context.get('step', 0)
         
         if step == 0:
-            whatsapp_service.send_text_message(
+            self._send_message(
                 phone,
-                "📦 *Submit Reject*\n\nPlease provide the following information:\n\n1️⃣ Order Number or Product Code"
+                "📦 *Submit Reject*\n\n"
+                "Please provide the following information:\n\n"
+                "1️⃣ Order Number or Product Code"
             )
             context['step'] = 1
-            whatsapp_service.update_session(session['id'], context=context)
+            whatsapp_service.update_session(
+                session['id'],
+                context=context
+            )
             return {"status": "awaiting_order_number"}
         
         elif step == 1:
             context['order_number'] = message
-            whatsapp_service.send_text_message(
+            self._send_message(
                 phone,
-                f"✅ Order: {message}\n\n2️⃣ Please describe the defect:"
+                f"✅ Order: {message}\n\n"
+                "2️⃣ Please describe the defect:"
             )
             context['step'] = 2
-            whatsapp_service.update_session(session['id'], context=context)
+            whatsapp_service.update_session(
+                session['id'],
+                context=context
+            )
             return {"status": "awaiting_defect_description"}
         
         elif step == 2:
             context['defect_description'] = message
-            whatsapp_service.send_text_message(
+            self._send_message(
                 phone,
                 f"✅ Defect: {message}\n\n3️⃣ Quantity of defective items:"
             )
