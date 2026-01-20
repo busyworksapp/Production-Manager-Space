@@ -37,7 +37,17 @@ class LoginPage {
 
             if (response.success) {
                 localStorage.setItem('token', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
+                const user = response.data.user;
+                // Parse permissions if they're a JSON string
+                if (user.permissions && typeof user.permissions === 'string') {
+                    try {
+                        user.permissions = JSON.parse(user.permissions);
+                    } catch (e) {
+                        console.warn('Failed to parse permissions JSON:', e);
+                        user.permissions = {};
+                    }
+                }
+                localStorage.setItem('user', JSON.stringify(user));
                 window.location.href = '/dashboard';
             }
         } catch (error) {

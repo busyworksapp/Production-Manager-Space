@@ -30,11 +30,20 @@ function checkPermission(module, action) {
         return false;
     }
     
-    if (user.permissions.all) {
+    let perms = user.permissions;
+    if (typeof perms === 'string') {
+        try {
+            perms = JSON.parse(perms);
+        } catch (e) {
+            return false;
+        }
+    }
+    
+    if (perms.all) {
         return true;
     }
     
-    const modulePerms = user.permissions[module];
+    const modulePerms = perms[module];
     if (!modulePerms) {
         return false;
     }
@@ -64,7 +73,18 @@ async function initAuth() {
     try {
         const response = await API.auth.getMe();
         if (response.success) {
-            setCurrentUser(response.data);
+            const userData = response.data;
+            // Parse permissions if they're a JSON string
+            if (userData.permissions && typeof userData.permissions === 'string') {
+                try {
+                    userData.permissions = JSON.parse(userData.permissions);
+                } catch (e) {
+                    console.warn('Failed to parse permissions JSON:', e);
+                    userData.permissions = {};
+                }
+            }
+            setCurrentUser(userData);
+            window.dispatchEvent(new CustomEvent('user-loaded', { detail: userData }));
         } else {
             logout();
         }
