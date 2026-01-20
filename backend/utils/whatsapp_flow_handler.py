@@ -85,7 +85,8 @@ class WhatsAppFlowHandler:
                 )
                 session = whatsapp_service.get_session(phone)
             
-            whatsapp_service._log_message(
+            # Log incoming message asynchronously
+            whatsapp_service._log_message_async(
                 phone,
                 'inbound',
                 message_type,

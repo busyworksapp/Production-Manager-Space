@@ -3,6 +3,7 @@ import requests
 import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
+from threading import Thread
 from backend.utils.logger import app_logger
 from backend.config.db_pool import get_db_connection
 
@@ -25,6 +26,16 @@ class WhatsAppService:
                 app_logger.debug(f"Could not load Twilio: {e}")
         return self.twilio_service
     
+    def _log_message_async(self, phone: str, direction: str, msg_type: str,
+                           content: str, payload: Dict, status: str = 'sent'):
+        """Log message asynchronously to avoid blocking message processing"""
+        thread = Thread(
+            target=self._log_message,
+            args=(phone, direction, msg_type, content, payload, status),
+            daemon=True
+        )
+        thread.start()
+    
     def send_text_message(self, to: str, message: str) -> Dict[str, Any]:
         # Try Twilio first (for Twilio WhatsApp integration)
         twilio_svc = self._get_twilio_service()
@@ -32,7 +43,8 @@ class WhatsAppService:
             try:
                 result = twilio_svc.send_whatsapp_message(to, message)
                 if result.get('success'):
-                    self._log_message(
+                    # Log message asynchronously to avoid blocking
+                    self._log_message_async(
                         to,
                         'outbound',
                         'text',
@@ -72,7 +84,8 @@ class WhatsAppService:
             response.raise_for_status()
             result = response.json()
             
-            self._log_message(to, 'outbound', 'text', message, result)
+            # Log message asynchronously to avoid blocking
+            self._log_message_async(to, 'outbound', 'text', message, result)
             app_logger.info(
                 f"Message sent via Graph API to {to}: "
                 f"{message[:50]}..."
@@ -82,7 +95,7 @@ class WhatsAppService:
             app_logger.error(
                 f"Failed to send message to {to}: {str(e)}"
             )
-            self._log_message(
+            self._log_message_async(
                 to,
                 'outbound',
                 'text',
@@ -125,12 +138,13 @@ class WhatsAppService:
             response.raise_for_status()
             result = response.json()
             
-            self._log_message(to, 'outbound', 'interactive', body_text, result)
+            # Log asynchronously
+            self._log_message_async(to, 'outbound', 'interactive', body_text, result)
             app_logger.info(f"Interactive buttons sent to {to}")
             return result
         except Exception as e:
             app_logger.error(f"Failed to send interactive buttons to {to}: {str(e)}")
-            self._log_message(to, 'outbound', 'interactive', body_text, {'error': str(e)}, status='failed')
+            self._log_message_async(to, 'outbound', 'interactive', body_text, {'error': str(e)}, status='failed')
             raise
     
     def send_interactive_list(self, to: str, body_text: str, button_text: str, sections: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -159,15 +173,17 @@ class WhatsAppService:
             response.raise_for_status()
             result = response.json()
             
-            self._log_message(to, 'outbound', 'list', body_text, result)
+            # Log asynchronously
+            self._log_message_async(to, 'outbound', 'list', body_text, result)
             app_logger.info(f"Interactive list sent to {to}")
             return result
         except Exception as e:
             app_logger.error(f"Failed to send interactive list to {to}: {str(e)}")
-            self._log_message(to, 'outbound', 'list', body_text, {'error': str(e)}, status='failed')
+            self._log_message_async(to, 'outbound', 'list', body_text, {'error': str(e)}, status='failed')
             raise
     
     def _log_message(self, phone: str, direction: str, msg_type: str, content: str, payload: Dict, status: str = 'sent'):
+        """Log message to database (non-blocking for outbound)"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -186,7 +202,7 @@ class WhatsAppService:
             cursor.close()
             conn.close()
         except Exception as e:
-            app_logger.error(f"Failed to log message: {str(e)}")
+            app_logger.error(f"Failed to log message: {type(e).__name__}: {str(e)}", exc_info=True)
     
     def _get_or_create_session(self, phone: str) -> int:
         conn = get_db_connection()
