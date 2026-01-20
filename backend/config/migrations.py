@@ -9,6 +9,8 @@ def run_migrations():
     try:
         # Migration 1: Add cost_impact column to replacement_tickets
         add_cost_impact_to_replacement_tickets()
+        # Migration 2: Ensure admin user has full permissions
+        ensure_admin_has_full_permissions()
     except Exception as e:
         app_logger.error(f"Migration error: {e}", exc_info=True)
 
@@ -45,4 +47,49 @@ def add_cost_impact_to_replacement_tickets():
         
     except Exception as e:
         app_logger.error(f"Failed to migrate replacement_tickets: {e}")
+        raise
+
+
+def ensure_admin_has_full_permissions():
+    """Ensure admin user has System Admin role with all permissions"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if System Admin role exists
+        cursor.execute("""
+            SELECT id FROM roles WHERE name = 'System Admin'
+        """)
+        
+        role_result = cursor.fetchone()
+        
+        if not role_result:
+            # Create System Admin role if it doesn't exist
+            app_logger.info("Creating System Admin role...")
+            cursor.execute("""
+                INSERT INTO roles (name, description, permissions) 
+                VALUES (%s, %s, %s)
+            """, ('System Admin', 'Full system access', '{"all": true}'))
+            conn.commit()
+            system_admin_id = cursor.lastrowid
+            app_logger.info(f"✓ Created System Admin role ID {system_admin_id}")
+        else:
+            system_admin_id = role_result['id']
+        
+        # Ensure admin user has System Admin role
+        cursor.execute("""
+            UPDATE users 
+            SET role_id = %s 
+            WHERE username = %s
+        """, (system_admin_id, 'admin@barron'))
+        
+        conn.commit()
+        app_logger.info("✓ Ensured admin@barron has System Admin role")
+        
+        cursor.close()
+        conn.close()
+        
+    except Exception as e:
+        app_logger.error(f"Failed to ensure admin permissions: {e}")
+        raise
         raise
