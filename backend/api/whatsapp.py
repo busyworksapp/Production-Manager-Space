@@ -29,23 +29,40 @@ def webhook_verify():
 @whatsapp_bp.route('/webhook', methods=['POST'])
 def webhook_receive():
     try:
-        # Handle both JSON and form-urlencoded (Twilio sends form-urlencoded)
+        # Handle multiple formats of webhook data
+        data = None
+        
+        # Try JSON first (for Graph API webhooks)
         if request.is_json:
             data = request.get_json()
-        else:
-            # Twilio sends as form-urlencoded with 'body' parameter
-            body = request.form.get('body')
-            if body:
-                try:
-                    data = json.loads(body)
-                except (json.JSONDecodeError, TypeError):
-                    data = None
-            else:
-                data = None
+        
+        # Try form-urlencoded body parameter (for some Twilio formats)
+        if not data and request.form.get('body'):
+            try:
+                data = json.loads(request.form.get('body'))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # Try Twilio WhatsApp format (form fields directly)
+        if not data and request.form:
+            # Twilio sends individual form parameters
+            form_data = request.form.to_dict()
+            app_logger.info(f"Received form data: {form_data}")
+            
+            # Check if this is a Twilio WhatsApp message
+            if 'From' in form_data or 'Body' in form_data:
+                # Convert Twilio format to our expected format
+                data = {
+                    'from': form_data.get('From'),
+                    'body': form_data.get('Body'),
+                    'message_type': 'text',
+                    'raw_form': form_data
+                }
         
         app_logger.info(f"WhatsApp webhook received: {json.dumps(data) if data else 'No data'}")
         
         if not data:
+            app_logger.warning(f"Could not parse webhook data. Request: {request.form}")
             return jsonify({'status': 'error', 'message': 'No data received'}), 400
         
         entry = data.get('entry', [])
@@ -88,17 +105,24 @@ def twilio_webhook_receive():
 
 def process_incoming_message(message: dict):
     try:
-        phone = message.get('from')
-        message_id = message.get('id')
-        message_type = message.get('type')
-        timestamp = message.get('timestamp')
+        # Handle both Graph API format and Twilio format
+        phone = message.get('from') or message.get('From')
+        message_id = message.get('id') or message.get('MessageSid')
+        message_type = message.get('message_type') or message.get('type', 'text')
         
-        app_logger.info(f"Processing message from {phone}, type: {message_type}")
+        app_logger.info(
+            f"Processing message from {phone}, type: {message_type}"
+        )
         
         message_text = ""
         payload = {}
         
-        if message_type == 'text':
+        # Handle Twilio WhatsApp format
+        if 'body' in message:
+            message_text = message.get('body', '')
+            payload = message
+        # Handle Graph API format
+        elif message_type == 'text':
             message_text = message.get('text', {}).get('body', '')
             payload = message
             
