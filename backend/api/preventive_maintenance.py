@@ -356,3 +356,7 @@ def calculate_next_due_date(frequency_type, frequency_value, last_performed=None
         return base_date + timedelta(days=frequency_value * 365)
     else:
         return base_date + timedelta(days=30)
+
+
+# Export with the name expected by app.py
+preventive_maintenance_bp = preventive_bp
