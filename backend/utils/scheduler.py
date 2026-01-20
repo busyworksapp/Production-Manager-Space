@@ -12,6 +12,15 @@ try:
 except ImportError:
     REPORTS_AVAILABLE = False
 
+try:
+    from backend.api.d365_integration import (
+        get_auth_headers, fetch_from_d365, import_records,
+        fetch_from_pms, export_to_d365
+    )
+    D365_AVAILABLE = True
+except ImportError:
+    D365_AVAILABLE = False
+
 class BackgroundScheduler:
     def __init__(self):
         self.running = False
@@ -268,6 +277,10 @@ class BackgroundScheduler:
                     )
     
     def process_d365_sync(self):
+        if not D365_AVAILABLE:
+            print("D365 integration module not available")
+            return
+            
         configs = execute_query(
             """SELECT * FROM d365_integration_config
                WHERE is_active = TRUE
@@ -276,7 +289,53 @@ class BackgroundScheduler:
         )
         
         for config in configs:
-            print(f"D365 sync triggered for config: {config['config_name']}")
+            try:
+                print(f"D365 sync started for config: {config['config_name']}")
+                
+                auth_creds = json.loads(config.get('auth_credentials', '{}'))
+                field_mapping = json.loads(config.get('field_mapping', '{}'))
+                headers = get_auth_headers(config['auth_type'], auth_creds)
+                
+                if config['sync_direction'] in ['import', 'bidirectional']:
+                    for entity in config['entity_types'].split(','):
+                        entity = entity.strip()
+                        print(f"  Importing {entity} from D365...")
+                        d365_records = fetch_from_d365(config['endpoint_url'], entity, headers)
+                        import_records(entity, d365_records, field_mapping)
+                        print(f"  Imported {len(d365_records)} {entity} records")
+                
+                if config['sync_direction'] in ['export', 'bidirectional']:
+                    for entity in config['entity_types'].split(','):
+                        entity = entity.strip()
+                        print(f"  Exporting {entity} to D365...")
+                        pms_records = fetch_from_pms(entity)
+                        if pms_records:
+                            export_to_d365(config['endpoint_url'], entity, pms_records, headers, field_mapping)
+                            print(f"  Exported {len(pms_records)} {entity} records")
+                
+                execute_query(
+                    """UPDATE d365_integration_config
+                       SET last_sync_at = NOW(),
+                           next_sync_at = DATE_ADD(NOW(), INTERVAL sync_frequency_minutes MINUTE),
+                           last_sync_status = 'success'
+                       WHERE id = %s""",
+                    (config['id'],),
+                    commit=True
+                )
+                
+                print(f"D365 sync completed successfully for config: {config['config_name']}")
+                
+            except Exception as e:
+                print(f"D365 sync failed for config {config['config_name']}: {str(e)}")
+                execute_query(
+                    """UPDATE d365_integration_config
+                       SET last_sync_at = NOW(),
+                           next_sync_at = DATE_ADD(NOW(), INTERVAL 60 MINUTE),
+                           last_sync_status = %s
+                       WHERE id = %s""",
+                    (f'error: {str(e)}', config['id']),
+                    commit=True
+                )
     
     def process_scheduled_reports(self):
         reports = execute_query(

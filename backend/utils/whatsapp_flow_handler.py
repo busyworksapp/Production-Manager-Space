@@ -1,11 +1,44 @@
 from typing import Dict, Any, Optional
 from backend.utils.whatsapp_service import whatsapp_service
+from backend.utils.twilio_service import twilio_service
 from backend.utils.logger import app_logger
 from backend.config.db_pool import get_db_connection
 import json
 
 class WhatsAppFlowHandler:
-    
+
+    def _send_message(self, phone: str, message: str) -> bool:
+        """
+        Send a message via Twilio WhatsApp (preferred) or Graph API.
+        Returns True if successful, False otherwise.
+        """
+        twilio_error = None
+        try:
+            # Try Twilio first (most likely for webhook)
+            result = twilio_service.send_whatsapp_message(phone, message)
+            if result.get('success'):
+                app_logger.info(
+                    f"Message sent via Twilio to {phone}"
+                )
+                return True
+        except Exception as e:
+            twilio_error = e
+            app_logger.debug(
+                f"Twilio send failed: {e}, trying Graph API..."
+            )
+        
+        try:
+            # Fallback to Graph API (for Meta WhatsApp)
+            whatsapp_service.send_text_message(phone, message)
+            app_logger.info(f"Message sent via Graph API to {phone}")
+            return True
+        except Exception as graph_error:
+            app_logger.error(
+                f"Both failed for {phone}: "
+                f"Twilio: {twilio_error}, Graph: {graph_error}"
+            )
+            return False
+
     MAIN_MENU = {
         "text": "📋 *Main Menu*\n\nPlease select an option:",
         "sections": [{
@@ -55,19 +88,55 @@ class WhatsAppFlowHandler:
             return self._show_main_menu(phone, session)
             
         except Exception as e:
-            app_logger.error(f"Error handling message from {phone}: {str(e)}")
-            whatsapp_service.send_text_message(phone, "❌ An error occurred. Please try again or type 'menu' to start over.")
+            app_logger.error(
+                f"Error handling message from {phone}: {str(e)}"
+            )
+            self._send_message(
+                phone,
+                "❌ An error occurred. Please try again or "
+                "type 'menu' to start over."
+            )
             return {"status": "error", "message": str(e)}
     
     def _show_main_menu(self, phone: str, session: Dict) -> Dict[str, Any]:
-        whatsapp_service.update_session(session['id'], state='awaiting_menu', flow=None, context={})
-        
-        whatsapp_service.send_interactive_list(
-            phone,
-            self.MAIN_MENU['text'],
-            "Select Option",
-            self.MAIN_MENU['sections']
+        whatsapp_service.update_session(
+            session['id'],
+            state='awaiting_menu',
+            flow=None,
+            context={}
         )
+        
+        # For Twilio, send text-based menu (interactive lists not supported)
+        menu_text = """📋 *Main Menu*
+
+Please select an option by typing the number:
+
+1️⃣ 📦 Submit Reject - Report a defective product
+2️⃣ 🔄 Customer Return - Process a customer return
+3️⃣ ⚠️ SOP Failure - Report a process failure
+4️⃣ 🔍 Track Item - Track an order or ticket
+5️⃣ 📊 Pull Data - Get reports and statistics
+
+Type: 1, 2, 3, 4, or 5"""
+        
+        try:
+            # Try Graph API first (for Meta WhatsApp Business accounts)
+            try:
+                whatsapp_service.send_interactive_list(
+                    phone,
+                    self.MAIN_MENU['text'],
+                    "Select Option",
+                    self.MAIN_MENU['sections']
+                )
+            except Exception as graph_api_error:
+                # Fallback to Twilio for text-based menu
+                app_logger.info(
+                    f"Graph API failed, using Twilio: {graph_api_error}"
+                )
+                twilio_service.send_whatsapp_message(phone, menu_text)
+        except Exception as e:
+            app_logger.error(f"Failed to send menu to {phone}: {str(e)}")
+            raise
         
         return {"status": "menu_shown"}
     

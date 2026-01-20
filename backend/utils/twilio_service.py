@@ -347,6 +347,64 @@ class TwilioService:
             return False
         return phone.startswith('+') and len(phone) >= 10
 
+    def send_whatsapp_message(
+        self,
+        to_phone: str,
+        message: str
+    ) -> Dict[str, Any]:
+        """
+        Send a WhatsApp message via Twilio
+        
+        Args:
+            to_phone: Recipient WhatsApp number (e.g., 'whatsapp:+27788494933')
+            message: Message content
+            
+        Returns:
+            Dictionary with status and message SID
+        """
+        if not self.client:
+            app_logger.error('Twilio client not initialized')
+            return {'success': False, 'error': 'Twilio not configured'}
+        
+        try:
+            # Ensure to_phone has whatsapp: prefix
+            if not to_phone.startswith('whatsapp:'):
+                to_phone = f'whatsapp:{to_phone}'
+            
+            msg = self.client.messages.create(
+                body=message,
+                from_=f'whatsapp:{self.from_phone}',
+                to=to_phone
+            )
+            
+            app_logger.info(
+                f'WhatsApp message sent successfully to {to_phone} (SID: {msg.sid})'
+            )
+            return {
+                'success': True,
+                'message_sid': msg.sid,
+                'status': msg.status,
+                'to': to_phone
+            }
+            
+        except TwilioRestException as e:
+            app_logger.error(
+                f'Twilio WhatsApp error to {to_phone}: {e.msg}'
+            )
+            return {
+                'success': False,
+                'error': str(e),
+                'error_code': e.code
+            }
+        except Exception as e:
+            app_logger.error(
+                f'Failed to send WhatsApp message to {to_phone}: {str(e)}'
+            )
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
     def _log_communication(
         self,
         user_id: int,

@@ -305,24 +305,240 @@ def perform_sync(config, entity_types, sync_direction):
     }
 
 def get_auth_headers(auth_type, auth_creds):
-    if auth_type == 'api_key':
-        return {'Authorization': f"Bearer {auth_creds.get('api_key')}"}
+    if auth_type == 'oauth':
+        access_token = get_oauth_token(auth_creds)
+        return {
+            'Authorization': f"Bearer {access_token}",
+            'Content-Type': 'application/json',
+            'OData-MaxVersion': '4.0',
+            'OData-Version': '4.0'
+        }
+    elif auth_type == 'api_key':
+        return {
+            'Authorization': f"Bearer {auth_creds.get('api_key')}",
+            'Content-Type': 'application/json'
+        }
     elif auth_type == 'basic':
         import base64
         credentials = f"{auth_creds.get('username')}:{auth_creds.get('password')}"
         encoded = base64.b64encode(credentials.encode()).decode()
-        return {'Authorization': f'Basic {encoded}'}
+        return {
+            'Authorization': f'Basic {encoded}',
+            'Content-Type': 'application/json'
+        }
     else:
-        return {}
+        return {'Content-Type': 'application/json'}
+
+def get_oauth_token(auth_creds):
+    token_url = auth_creds.get('token_url')
+    client_id = auth_creds.get('client_id')
+    client_secret = auth_creds.get('client_secret')
+    resource = auth_creds.get('resource')
+    
+    if not all([token_url, client_id, client_secret, resource]):
+        raise ValueError('Missing OAuth credentials')
+    
+    payload = {
+        'grant_type': 'client_credentials',
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'resource': resource
+    }
+    
+    response = requests.post(token_url, data=payload, timeout=10)
+    
+    if response.status_code == 200:
+        return response.json().get('access_token')
+    else:
+        raise Exception(f'OAuth token request failed: {response.text}')
 
 def fetch_from_d365(endpoint_url, entity_type, headers):
-    return []
+    entity_endpoints = {
+        'sales_orders': '/salesorders',
+        'products': '/products',
+        'customers': '/accounts'
+    }
+    
+    entity_path = entity_endpoints.get(entity_type, f'/{entity_type}')
+    full_url = f"{endpoint_url.rstrip('/')}{entity_path}"
+    
+    try:
+        response = requests.get(full_url, headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if 'value' in data:
+            return data['value']
+        elif isinstance(data, list):
+            return data
+        else:
+            return [data]
+            
+    except requests.exceptions.RequestException as e:
+        raise Exception(f'Failed to fetch {entity_type} from D365: {str(e)}')
 
 def import_records(entity_type, records, field_mapping):
+    if entity_type == 'sales_orders':
+        import_sales_orders(records, field_mapping)
+    elif entity_type == 'products':
+        import_products(records, field_mapping)
+    elif entity_type == 'customers':
+        import_customers(records, field_mapping)
+
+def import_sales_orders(orders, field_mapping):
+    for d365_order in orders:
+        try:
+            order_number = map_field(d365_order, field_mapping, 'order_number', 'SalesOrderNumber')
+            customer_name = map_field(d365_order, field_mapping, 'customer_name', 'CustomerName')
+            quantity = map_field(d365_order, field_mapping, 'quantity', 'Quantity', default=0)
+            order_value = map_field(d365_order, field_mapping, 'order_value', 'TotalAmount', default=0)
+            start_date = map_field(d365_order, field_mapping, 'start_date', 'RequestedDeliveryDate')
+            
+            existing = execute_query(
+                "SELECT id FROM orders WHERE order_number = %s",
+                (order_number,),
+                fetch_one=True
+            )
+            
+            if existing:
+                execute_query(
+                    """UPDATE orders SET
+                       customer_name = %s, quantity = %s, order_value = %s,
+                       start_date = %s, d365_sync_id = %s, last_d365_sync = NOW()
+                       WHERE order_number = %s""",
+                    (customer_name, quantity, order_value, start_date, 
+                     d365_order.get('Id') or d365_order.get('SalesOrderId'), order_number),
+                    commit=True
+                )
+            else:
+                execute_query(
+                    """INSERT INTO orders
+                       (order_number, customer_name, quantity, order_value,
+                        start_date, status, d365_sync_id, last_d365_sync)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())""",
+                    (order_number, customer_name, quantity, order_value,
+                     start_date, 'unscheduled', d365_order.get('Id') or d365_order.get('SalesOrderId')),
+                    commit=True
+                )
+                
+        except Exception as e:
+            print(f"Failed to import order {d365_order.get('SalesOrderNumber', 'unknown')}: {str(e)}")
+            continue
+
+def import_products(products, field_mapping):
+    for d365_product in products:
+        try:
+            product_name = map_field(d365_product, field_mapping, 'product_name', 'Name')
+            product_code = map_field(d365_product, field_mapping, 'product_code', 'ProductNumber')
+            category = map_field(d365_product, field_mapping, 'category', 'Category')
+            
+            existing = execute_query(
+                "SELECT id FROM products WHERE product_code = %s",
+                (product_code,),
+                fetch_one=True
+            )
+            
+            if existing:
+                execute_query(
+                    """UPDATE products SET
+                       product_name = %s, category = %s, d365_sync_id = %s
+                       WHERE product_code = %s""",
+                    (product_name, category, d365_product.get('Id') or d365_product.get('ProductId'), product_code),
+                    commit=True
+                )
+            else:
+                execute_query(
+                    """INSERT INTO products
+                       (product_name, product_code, category, d365_sync_id)
+                       VALUES (%s, %s, %s, %s)""",
+                    (product_name, product_code, category, d365_product.get('Id') or d365_product.get('ProductId')),
+                    commit=True
+                )
+                
+        except Exception as e:
+            print(f"Failed to import product {d365_product.get('ProductNumber', 'unknown')}: {str(e)}")
+            continue
+
+def import_customers(customers, field_mapping):
     pass
 
 def fetch_from_pms(entity_type):
-    return []
+    if entity_type == 'sales_orders':
+        return execute_query(
+            """SELECT * FROM orders 
+               WHERE status = 'completed' 
+               AND (last_d365_sync IS NULL OR updated_at > last_d365_sync)
+               ORDER BY completed_at DESC
+               LIMIT 100""",
+            fetch_all=True
+        ) or []
+    elif entity_type == 'products':
+        return execute_query(
+            "SELECT * FROM products WHERE is_active = TRUE",
+            fetch_all=True
+        ) or []
+    else:
+        return []
 
 def export_to_d365(endpoint_url, entity_type, records, headers, field_mapping):
-    pass
+    entity_endpoints = {
+        'sales_orders': '/salesorders',
+        'products': '/products'
+    }
+    
+    entity_path = entity_endpoints.get(entity_type, f'/{entity_type}')
+    full_url = f"{endpoint_url.rstrip('/')}{entity_path}"
+    
+    for record in records:
+        try:
+            d365_payload = map_pms_to_d365(entity_type, record, field_mapping)
+            
+            if record.get('d365_sync_id'):
+                update_url = f"{full_url}({record['d365_sync_id']})"
+                response = requests.patch(update_url, json=d365_payload, headers=headers, timeout=30)
+            else:
+                response = requests.post(full_url, json=d365_payload, headers=headers, timeout=30)
+            
+            response.raise_for_status()
+            
+            if not record.get('d365_sync_id') and response.status_code == 201:
+                new_id = response.json().get('Id') or response.json().get('SalesOrderId')
+                execute_query(
+                    f"UPDATE {get_pms_table(entity_type)} SET d365_sync_id = %s, last_d365_sync = NOW() WHERE id = %s",
+                    (new_id, record['id']),
+                    commit=True
+                )
+            else:
+                execute_query(
+                    f"UPDATE {get_pms_table(entity_type)} SET last_d365_sync = NOW() WHERE id = %s",
+                    (record['id'],),
+                    commit=True
+                )
+                
+        except Exception as e:
+            print(f"Failed to export {entity_type} record {record.get('id')}: {str(e)}")
+            continue
+
+def map_field(source_record, field_mapping, pms_field, default_d365_field, default=None):
+    d365_field = field_mapping.get(pms_field, default_d365_field)
+    return source_record.get(d365_field, default)
+
+def map_pms_to_d365(entity_type, pms_record, field_mapping):
+    if entity_type == 'sales_orders':
+        return {
+            field_mapping.get('order_number', 'SalesOrderNumber'): pms_record.get('order_number'),
+            field_mapping.get('customer_name', 'CustomerName'): pms_record.get('customer_name'),
+            field_mapping.get('quantity', 'Quantity'): pms_record.get('quantity'),
+            field_mapping.get('order_value', 'TotalAmount'): pms_record.get('order_value'),
+            field_mapping.get('status', 'Status'): pms_record.get('status')
+        }
+    return {}
+
+def get_pms_table(entity_type):
+    tables = {
+        'sales_orders': 'orders',
+        'products': 'products',
+        'customers': 'customers'
+    }
+    return tables.get(entity_type, entity_type)
