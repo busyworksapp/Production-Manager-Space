@@ -59,12 +59,29 @@ def webhook_receive():
                     'raw_form': form_data
                 }
         
-        app_logger.info(f"WhatsApp webhook received: {json.dumps(data) if data else 'No data'}")
+        app_logger.info(
+            f"WhatsApp webhook received: "
+            f"{json.dumps(data) if data else 'No data'}"
+        )
         
         if not data:
-            app_logger.warning(f"Could not parse webhook data. Request: {request.form}")
-            return jsonify({'status': 'error', 'message': 'No data received'}), 400
+            app_logger.warning(
+                f"Could not parse webhook data. "
+                f"Request: {request.form}"
+            )
+            return jsonify(
+                {'status': 'error', 'message': 'No data received'}
+            ), 400
         
+        # Handle Twilio format (direct form fields with from/body)
+        if 'from' in data and 'body' in data:
+            app_logger.info(
+                f"Processing Twilio message from {data.get('from')}"
+            )
+            process_incoming_message(data)
+            return jsonify({'status': 'ok'}), 200
+        
+        # Handle Graph API format (entries/changes structure)
         entry = data.get('entry', [])
         if not entry:
             return jsonify({'status': 'ok'}), 200
