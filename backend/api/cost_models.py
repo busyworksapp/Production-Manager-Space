@@ -225,7 +225,7 @@ def create_overhead_cost():
     except Exception as e:
         return error_response(str(e), 500)
 
-@cost_models_bp.route('/overhead/<int:id>', methods='PUT'])
+@cost_models_bp.route('/overhead/<int:id>', methods=['PUT'])
 @token_required
 @permission_required('finance', 'write')
 def update_overhead_cost(id):

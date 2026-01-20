@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
 from backend.utils.logger import app_logger
-from backend.utils.db import get_db_connection
+from backend.config.db_pool import get_db_connection
 
 class WhatsAppService:
     def __init__(self):

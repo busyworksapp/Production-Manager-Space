@@ -176,7 +176,7 @@ def test_send_menu():
 @whatsapp_bp.route('/sessions', methods=['GET'])
 def get_sessions():
     try:
-        from backend.utils.db import get_db_connection
+        from backend.config.db_pool import get_db_connection
         
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -208,7 +208,7 @@ def get_sessions():
 @whatsapp_bp.route('/interactions', methods=['GET'])
 def get_interactions():
     try:
-        from backend.utils.db import get_db_connection
+        from backend.config.db_pool import get_db_connection
         
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -252,7 +252,7 @@ def get_interactions():
 @whatsapp_bp.route('/messages/<phone>', methods=['GET'])
 def get_messages_by_phone(phone: str):
     try:
-        from backend.utils.db import get_db_connection
+        from backend.config.db_pool import get_db_connection
         
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)

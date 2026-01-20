@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 from backend.utils.whatsapp_service import whatsapp_service
 from backend.utils.logger import app_logger
-from backend.utils.db import get_db_connection
+from backend.config.db_pool import get_db_connection
 import json
 
 class WhatsAppFlowHandler:
