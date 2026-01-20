@@ -29,8 +29,21 @@ def webhook_verify():
 @whatsapp_bp.route('/webhook', methods=['POST'])
 def webhook_receive():
     try:
-        data = request.get_json()
-        app_logger.info(f"WhatsApp webhook received: {json.dumps(data)}")
+        # Handle both JSON and form-urlencoded (Twilio sends form-urlencoded)
+        if request.is_json:
+            data = request.get_json()
+        else:
+            # Twilio sends as form-urlencoded with 'body' parameter
+            body = request.form.get('body')
+            if body:
+                try:
+                    data = json.loads(body)
+                except (json.JSONDecodeError, TypeError):
+                    data = None
+            else:
+                data = None
+        
+        app_logger.info(f"WhatsApp webhook received: {json.dumps(data) if data else 'No data'}")
         
         if not data:
             return jsonify({'status': 'error', 'message': 'No data received'}), 400
@@ -60,16 +73,18 @@ def webhook_receive():
         app_logger.error(f"Webhook processing error: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# Alias for Twilio compatibility
+
 @whatsapp_bp.route('/twilio-webhook', methods=['GET'])
 def twilio_webhook_verify():
     """Alias for webhook verification - Twilio uses different endpoint names"""
     return webhook_verify()
 
+
 @whatsapp_bp.route('/twilio-webhook', methods=['POST'])
 def twilio_webhook_receive():
     """Alias for webhook receive - Twilio uses different endpoint names"""
     return webhook_receive()
+
 
 def process_incoming_message(message: dict):
     try:
