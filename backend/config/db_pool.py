@@ -119,20 +119,49 @@ class DatabaseConnectionPool:
             if connection:
                 self.return_connection(connection)
 
-db_pool = DatabaseConnectionPool(
-    min_connections=int(os.getenv('DB_POOL_MIN', 5)),
-    max_connections=int(os.getenv('DB_POOL_MAX', 20))
-)
+# Lazy initialization - pool is created on first use, not at import time
+_db_pool = None
+
+def _get_pool():
+    """Get or create the database connection pool lazily"""
+    global _db_pool
+    if _db_pool is None:
+        try:
+            _db_pool = DatabaseConnectionPool(
+                min_connections=int(os.getenv('DB_POOL_MIN', 5)),
+                max_connections=int(os.getenv('DB_POOL_MAX', 20))
+            )
+            db_logger.info("Database connection pool created on first use")
+        except Exception as e:
+            db_logger.error(
+                f"Failed to create database pool: {e}. "
+                "Database operations will fail until variables are set."
+            )
+            # Don't raise here - let the pool remain None and fail when first query is made
+            _db_pool = None
+    return _db_pool
 
 def get_db_connection():
-    return db_pool.get_connection()
+    pool = _get_pool()
+    if pool is None:
+        raise RuntimeError(
+            "Database pool not available. Check database configuration."
+        )
+    return pool.get_connection()
 
 def return_db_connection(connection):
-    db_pool.return_connection(connection)
+    pool = _get_pool()
+    if pool is not None:
+        pool.return_connection(connection)
 
 @contextmanager
 def get_db_cursor(commit=False):
-    with db_pool.get_cursor(commit=commit) as cursor:
+    pool = _get_pool()
+    if pool is None:
+        raise RuntimeError(
+            "Database pool not available. Check database configuration."
+        )
+    with pool.get_cursor(commit=commit) as cursor:
         yield cursor
 
 def execute_query(query, params=None, fetch_one=False, fetch_all=False, commit=False):
