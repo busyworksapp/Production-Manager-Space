@@ -1,7 +1,7 @@
 from flask import Flask, render_template
 from flask_cors import CORS
 import os
-
+# Force Railway rebuild - LazyPoolWrapper fix v2
 from backend.config.env_validator import validate_environment
 validate_environment()
 
