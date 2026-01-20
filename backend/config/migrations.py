@@ -11,6 +11,8 @@ def run_migrations():
         add_cost_impact_to_replacement_tickets()
         # Migration 2: Ensure admin user has full permissions
         ensure_admin_has_full_permissions()
+        # Migration 3: Update all role permissions
+        update_role_permissions()
     except Exception as e:
         app_logger.error(f"Migration error: {e}", exc_info=True)
 
@@ -92,4 +94,61 @@ def ensure_admin_has_full_permissions():
     except Exception as e:
         app_logger.error(f"Failed to ensure admin permissions: {e}")
         raise
+
+
+def update_role_permissions():
+    """Update all role permissions to match navigation modules"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Define role permissions aligned with frontend navigation
+        role_permissions = {
+            'System Admin': {'all': True},
+            'Department Manager': {
+                'planning': {'read': True, 'write': True},
+                'qc': {'read': True},
+                'maintenance': {'read': True},
+                'admin': {'read': True}
+            },
+            'Planner': {
+                'planning': {'read': True, 'write': True}
+            },
+            'Operator': {
+                'planning': {'read': True},
+                'sop': {'read': True, 'write': True}
+            },
+            'QC Coordinator': {
+                'qc': {'read': True, 'write': True}
+            },
+            'Maintenance Technician': {
+                'maintenance': {'read': True, 'write': True}
+            }
+        }
+        
+        updated_count = 0
+        for role_name, permissions in role_permissions.items():
+            import json
+            permissions_json = json.dumps(permissions)
+            
+            cursor.execute("""
+                UPDATE roles 
+                SET permissions = %s 
+                WHERE name = %s
+            """, (permissions_json, role_name))
+            
+            if cursor.rowcount > 0:
+                updated_count += 1
+                app_logger.info(f"✓ Updated {role_name} permissions")
+        
+        conn.commit()
+        app_logger.info(
+            f"✓ Successfully updated {updated_count} role permissions"
+        )
+        
+        cursor.close()
+        conn.close()
+        
+    except Exception as e:
+        app_logger.error(f"Failed to update role permissions: {e}")
         raise
