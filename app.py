@@ -8,6 +8,7 @@ validate_environment()
 from backend.utils.logger import app_logger
 from backend.utils.error_handler import register_error_handlers
 from backend.utils.security import init_security
+from backend.config.migrations import run_migrations
 
 from backend.api.auth import auth_bp
 from backend.api.departments import departments_bp
@@ -56,6 +57,7 @@ register_error_handlers(app)
 init_security(app)
 
 scheduler.start()
+run_migrations()  # Run database migrations on startup
 app_logger.info("Application initialized successfully")
 
 app.register_blueprint(auth_bp)

@@ -217,7 +217,8 @@ class WhatsAppService:
         result = cursor.fetchone()
         
         if result:
-            session_id = result[0]
+            # Result is a dict from DictCursor
+            session_id = result['id'] if isinstance(result, dict) else result[0]
             cursor.execute("""
                 UPDATE whatsapp_sessions 
                 SET last_message_at = NOW(), expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR)

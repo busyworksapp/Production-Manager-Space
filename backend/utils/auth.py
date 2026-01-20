@@ -1,6 +1,7 @@
 import jwt
 import bcrypt
 import os
+import json
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, jsonify
@@ -73,7 +74,18 @@ def permission_required(module, action):
             if not role:
                 return jsonify({'error': 'Unauthorized'}), 403
             
-            permissions = role.get('permissions', {})
+            permissions = role.get('permissions', '{}')
+            
+            # Parse permissions if it's a JSON string
+            if isinstance(permissions, str):
+                try:
+                    permissions = json.loads(permissions)
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    permissions = {}
+            
+            # Ensure permissions is a dict
+            if not isinstance(permissions, dict):
+                permissions = {}
             
             if permissions.get('all'):
                 return f(*args, **kwargs)

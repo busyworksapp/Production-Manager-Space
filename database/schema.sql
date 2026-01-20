@@ -195,6 +195,7 @@ CREATE TABLE IF NOT EXISTS replacement_tickets (
     rejection_reason TEXT NOT NULL,
     rejection_type ENUM('material', 'workmanship', 'machine', 'design', 'other') NOT NULL,
     status ENUM('pending_approval', 'approved', 'replacement_processed', 'no_stock', 'rejected') DEFAULT 'pending_approval',
+    cost_impact DECIMAL(12,2) DEFAULT 0,
     created_by_id INT NOT NULL,
     approved_by_id INT,
     approved_at TIMESTAMP NULL,
