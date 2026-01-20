@@ -18,29 +18,29 @@ def run_migrations():
 
 
 def add_cost_impact_to_replacement_tickets():
-    """Add cost_impact column to replacement_tickets table if it doesn't exist"""
+    """Add cost_impact column to replacement_tickets if missing"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check if column exists
         cursor.execute("""
-            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_NAME = 'replacement_tickets' 
+            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = 'replacement_tickets'
             AND COLUMN_NAME = 'cost_impact'
             AND TABLE_SCHEMA = DATABASE()
         """)
         
         if not cursor.fetchone():
             # Column doesn't exist, add it
-            app_logger.info("Adding cost_impact column to replacement_tickets...")
+            app_logger.info("Adding cost_impact column to replacement_tickets")
             cursor.execute("""
-                ALTER TABLE replacement_tickets 
-                ADD COLUMN cost_impact DECIMAL(12,2) DEFAULT 0 
+                ALTER TABLE replacement_tickets
+                ADD COLUMN cost_impact DECIMAL(12,2) DEFAULT 0
                 AFTER rejection_type
             """)
             conn.commit()
-            app_logger.info("✓ Successfully added cost_impact column")
+            app_logger.info("Successfully added cost_impact column")
         else:
             app_logger.debug("cost_impact column already exists")
         
@@ -67,26 +67,26 @@ def ensure_admin_has_full_permissions():
         
         if not role_result:
             # Create System Admin role if it doesn't exist
-            app_logger.info("Creating System Admin role...")
+            app_logger.info("Creating System Admin role")
             cursor.execute("""
-                INSERT INTO roles (name, description, permissions) 
+                INSERT INTO roles (name, description, permissions)
                 VALUES (%s, %s, %s)
             """, ('System Admin', 'Full system access', '{"all": true}'))
             conn.commit()
             system_admin_id = cursor.lastrowid
-            app_logger.info(f"✓ Created System Admin role ID {system_admin_id}")
+            app_logger.info(f"Created System Admin role ID {system_admin_id}")
         else:
             system_admin_id = role_result['id']
         
         # Ensure admin user has System Admin role
         cursor.execute("""
-            UPDATE users 
-            SET role_id = %s 
+            UPDATE users
+            SET role_id = %s
             WHERE username = %s
         """, (system_admin_id, 'admin@barron'))
         
         conn.commit()
-        app_logger.info("✓ Ensured admin@barron has System Admin role")
+        app_logger.info("Ensured admin@barron has System Admin role")
         
         cursor.close()
         conn.close()
@@ -101,6 +101,7 @@ def update_role_permissions():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        import json
         
         # Define role permissions aligned with frontend navigation
         role_permissions = {
@@ -123,28 +124,41 @@ def update_role_permissions():
             },
             'Maintenance Technician': {
                 'maintenance': {'read': True, 'write': True}
+            },
+            'admin': {'all': True},
+            'manager': {
+                'planning': {'read': True, 'write': True},
+                'qc': {'read': True},
+                'maintenance': {'read': True},
+                'admin': {'read': True}
+            },
+            'supervisor': {
+                'planning': {'read': True},
+                'sop': {'read': True, 'write': True}
+            },
+            'finance': {
+                'finance': {'read': True, 'write': True},
+                'reports': {'read': True}
             }
         }
         
         updated_count = 0
         for role_name, permissions in role_permissions.items():
-            import json
             permissions_json = json.dumps(permissions)
             
             cursor.execute("""
-                UPDATE roles 
-                SET permissions = %s 
+                UPDATE roles
+                SET permissions = %s
                 WHERE name = %s
             """, (permissions_json, role_name))
             
             if cursor.rowcount > 0:
                 updated_count += 1
-                app_logger.info(f"✓ Updated {role_name} permissions")
+                app_logger.debug(f"Updated {role_name} permissions")
         
         conn.commit()
-        app_logger.info(
-            f"✓ Successfully updated {updated_count} role permissions"
-        )
+        if updated_count > 0:
+            app_logger.info(f"Updated {updated_count} role permissions")
         
         cursor.close()
         conn.close()
