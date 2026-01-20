@@ -257,3 +257,144 @@ def create_ncr(id):
         return success_response({'id': ncr_id}, 'NCR completed and ticket closed', 201)
     except Exception as e:
         return error_response(str(e), 500)
+
+
+@sop_bp.route('/tickets/<int:id>/hod-decision', methods=['POST'])
+@token_required
+@permission_required('admin', 'write')
+def hod_decision(id):
+    """HOD makes final decision on escalated SOP ticket"""
+    data = request.get_json()
+    user_id = request.current_user['user_id']
+    
+    decision = data.get('decision')
+    final_department_id = data.get('final_department_id')
+    decision_notes = data.get('decision_notes')
+    
+    if not decision or decision not in ['assign', 'reject', 'close']:
+        return error_response('Valid decision is required (assign, reject, close)', 400)
+    
+    ticket = execute_query(
+        """SELECT charged_department_id, charging_department_id, escalated_to_hod 
+           FROM sop_failure_tickets WHERE id = %s""",
+        (id,),
+        fetch_one=True
+    )
+    
+    if not ticket:
+        return error_response('SOP ticket not found', 404)
+    
+    if not ticket['escalated_to_hod']:
+        return error_response('Ticket has not been escalated to HOD', 400)
+    
+    try:
+        if decision == 'assign':
+            if not final_department_id:
+                return error_response('final_department_id is required for assignment decision', 400)
+            
+            execute_query(
+                """UPDATE sop_failure_tickets 
+                   SET charged_department_id = %s, 
+                       status = 'open',
+                       hod_decision = %s,
+                       hod_decided_by_id = %s,
+                       hod_decision_date = NOW()
+                   WHERE id = %s""",
+                (final_department_id, decision_notes, user_id, id),
+                commit=True
+            )
+            
+            dept = execute_query(
+                "SELECT manager_id FROM departments WHERE id = %s",
+                (final_department_id,),
+                fetch_one=True
+            )
+            
+            if dept and dept['manager_id']:
+                create_notification(
+                    dept['manager_id'],
+                    'sop_hod_decision',
+                    'HOD Assigned SOP Ticket',
+                    f'HOD has assigned SOP ticket #{id} to your department. NCR required.',
+                    'sop_ticket',
+                    id,
+                    priority='urgent'
+                )
+            
+            message = f'HOD assigned ticket to final department'
+            
+        elif decision == 'reject':
+            execute_query(
+                """UPDATE sop_failure_tickets 
+                   SET status = 'closed',
+                       hod_decision = %s,
+                       hod_decided_by_id = %s,
+                       hod_decision_date = NOW(),
+                       closed_at = NOW()
+                   WHERE id = %s""",
+                (f'REJECTED: {decision_notes}', user_id, id),
+                commit=True
+            )
+            
+            create_notification(
+                ticket.get('charging_department_id'),
+                'sop_hod_decision',
+                'HOD Rejected SOP Ticket',
+                f'HOD has rejected SOP ticket #{id}. Ticket closed.',
+                'sop_ticket',
+                id,
+                priority='high'
+            )
+            
+            message = 'HOD rejected ticket - ticket closed'
+            
+        elif decision == 'close':
+            execute_query(
+                """UPDATE sop_failure_tickets 
+                   SET status = 'closed',
+                       hod_decision = %s,
+                       hod_decided_by_id = %s,
+                       hod_decision_date = NOW(),
+                       closed_at = NOW()
+                   WHERE id = %s""",
+                (f'CLOSED: {decision_notes}', user_id, id),
+                commit=True
+            )
+            
+            message = 'HOD closed ticket'
+        
+        log_audit(user_id, 'HOD_DECISION', 'sop_ticket', id, ticket, {
+            'decision': decision,
+            'final_department_id': final_department_id,
+            'notes': decision_notes
+        })
+        
+        return success_response(message=message)
+        
+    except Exception as e:
+        return error_response(str(e), 500)
+
+
+@sop_bp.route('/tickets/escalated', methods=['GET'])
+@token_required
+@permission_required('admin', 'read')
+def get_escalated_tickets():
+    """Get all tickets escalated to HOD for decision"""
+    query = """
+        SELECT st.*,
+               charging_dept.name as charging_department_name,
+               charged_dept.name as charged_department_name,
+               original_dept.name as original_charged_department_name,
+               CONCAT(created.first_name, ' ', created.last_name) as created_by_name
+        FROM sop_failure_tickets st
+        LEFT JOIN departments charging_dept ON st.charging_department_id = charging_dept.id
+        LEFT JOIN departments charged_dept ON st.charged_department_id = charged_dept.id
+        LEFT JOIN departments original_dept ON st.original_charged_department_id = original_dept.id
+        LEFT JOIN users created ON st.created_by_id = created.id
+        WHERE st.escalated_to_hod = TRUE
+        AND st.status IN ('rejected', 'escalated')
+        ORDER BY st.created_at DESC
+    """
+    
+    tickets = execute_query(query, fetch_all=True)
+    return success_response(tickets)

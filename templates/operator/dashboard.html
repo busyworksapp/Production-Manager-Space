@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="operator-dashboard">
-    <div id="offlineIndicator" class="offline-indicator" style="display: none;">
+    <div id="offlineIndicator" class="offline-indicator operator-offline-indicator">
         ⚠️ You are offline. Changes will sync when connection is restored.
     </div>
     
@@ -15,23 +15,23 @@
         <div class="operator-info">
             <div>
                 <div class="operator-name" id="employeeName">Loading...</div>
-                <div style="font-size: 0.9rem; opacity: 0.9;" id="employeeType"></div>
+                <div class="operator-employee-type" id="employeeType"></div>
             </div>
             <div>
                 <span class="machine-badge" id="currentMachine">No Machine</span>
             </div>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 0.9rem;">
+        <div class="operator-header-bottom">
+            <div class="operator-dept-info">
                 <span class="status-indicator online"></span>
                 <span id="departmentName">Department</span>
             </div>
-            <button class="btn btn-sm btn-secondary" onclick="logout()" style="background-color: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);">Logout</button>
+            <button class="btn btn-sm btn-secondary operator-logout-btn">Logout</button>
         </div>
     </div>
     
-    <div style="padding: var(--spacing-md);">
-        <div id="currentJobSection" style="display: none;">
+    <div class="operator-content">
+        <div id="currentJobSection" class="operator-current-job-hidden">
             <div class="current-job-banner">
                 <div class="current-job-header">CURRENT JOB</div>
                 <div class="current-job-number" id="currentJobNumber">-</div>
@@ -58,29 +58,29 @@
         </div>
         
         <div class="quick-actions">
-            <div class="quick-action-btn complete-btn" onclick="showCurrentJobActions()">
+            <div class="quick-action-btn complete-btn">
                 <div class="quick-action-icon">✓</div>
                 <div class="quick-action-label">Complete Job</div>
             </div>
             
-            <div class="quick-action-btn defect-btn" onclick="reportDefect()">
+            <div class="quick-action-btn defect-btn">
                 <div class="quick-action-icon">⚠</div>
                 <div class="quick-action-label">Report Defect</div>
             </div>
             
-            <div class="quick-action-btn pause-btn" onclick="showBreakOptions()">
+            <div class="quick-action-btn pause-btn">
                 <div class="quick-action-icon">⏸</div>
                 <div class="quick-action-label">Take Break</div>
             </div>
             
-            <div class="quick-action-btn" onclick="showModal('manualJobModal')">
+            <div class="quick-action-btn add-job-btn">
                 <div class="quick-action-icon">+</div>
                 <div class="quick-action-label">Add Job</div>
             </div>
         </div>
         
-        <div style="margin-top: 2rem;">
-            <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-text-primary);">Upcoming Jobs</h2>
+        <div class="operator-jobs-section">
+            <h2 class="operator-jobs-title">Upcoming Jobs</h2>
             <div id="jobsList">
                 <div class="loading">Loading jobs...</div>
             </div>
@@ -92,7 +92,7 @@
             <div class="modal-header">Job Details</div>
             <div id="jobDetails"></div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="hideModal('jobDetailModal')">Close</button>
+                <button type="button" class="btn btn-secondary close-modal-btn" data-modal="jobDetailModal">Close</button>
             </div>
         </div>
     </div>
@@ -107,7 +107,7 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="hideModal('manualJobModal')">Cancel</button>
+                    <button type="button" class="btn btn-secondary close-modal-btn" data-modal="manualJobModal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Job</button>
                 </div>
             </form>
@@ -123,23 +123,23 @@
                 <div class="form-group">
                     <label class="form-label">Actual Quantity Completed*</label>
                     <div class="number-stepper touch-optimized">
-                        <button type="button" class="stepper-btn" onclick="decrementQuantity()">−</button>
-                        <input type="number" id="actualQuantity" class="stepper-value" required readonly style="border: 2px solid var(--color-border); border-radius: var(--border-radius); background-color: white;">
-                        <button type="button" class="stepper-btn" onclick="incrementQuantity()">+</button>
+                        <button type="button" class="stepper-btn decrement-qty-btn">−</button>
+                        <input type="number" id="actualQuantity" class="stepper-value operator-stepper-input" required readonly>
+                        <button type="button" class="stepper-btn increment-qty-btn">+</button>
                     </div>
-                    <small style="color: var(--color-text-secondary); display: block; text-align: center; margin-top: 0.5rem;">
+                    <small class="operator-stepper-help">
                         Use + and − buttons to adjust quantity
                     </small>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="jobNotes">Notes (Optional)</label>
-                    <textarea id="jobNotes" class="form-textarea" rows="3" style="min-height: 80px;"></textarea>
+                    <textarea id="jobNotes" class="form-textarea operator-notes-textarea" rows="3"></textarea>
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="hideModal('completeJobModal')">Cancel</button>
-                    <button type="submit" class="btn btn-success" style="min-height: 56px;">Complete Job</button>
+                    <button type="button" class="btn btn-secondary close-modal-btn" data-modal="completeJobModal">Cancel</button>
+                    <button type="submit" class="btn btn-success operator-complete-btn">Complete Job</button>
                 </div>
             </form>
         </div>
@@ -148,205 +148,6 @@
     <script src="/static/js/api.js"></script>
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/utils.js"></script>
-    <script>
-        let currentJob = null;
-        
-        function incrementQuantity() {
-            const input = document.getElementById('actualQuantity');
-            input.value = parseInt(input.value || 0) + 1;
-        }
-        
-        function decrementQuantity() {
-            const input = document.getElementById('actualQuantity');
-            const currentValue = parseInt(input.value || 0);
-            if (currentValue > 0) {
-                input.value = currentValue - 1;
-            }
-        }
-        
-        function showCurrentJobActions() {
-            if (currentJob) {
-                completeJobPrompt(currentJob.id, currentJob.scheduled_quantity);
-            } else {
-                showAlert('No job currently in progress', 'warning');
-            }
-        }
-        
-        function reportDefect() {
-            if (currentJob) {
-                window.location.href = `/defects/replacement-tickets?job_id=${currentJob.id}`;
-            } else {
-                showAlert('Please start a job first', 'warning');
-            }
-        }
-        
-        function showBreakOptions() {
-            showAlert('Break tracking coming soon', 'info');
-        }
-        
-        async function loadJobs() {
-            const user = getCurrentUser();
-            if (user) {
-                document.getElementById('employeeName').textContent = user.name || user.username;
-                document.getElementById('employeeType').textContent = (user.employee_type || 'Operator').replace('_', ' ').toUpperCase();
-                document.getElementById('departmentName').textContent = user.department_name || 'Department';
-            }
-            
-            try {
-                const response = await API.operator.getMyJobs();
-                
-                if (response.success) {
-                    const jobs = response.data;
-                    const inProgressJob = jobs.find(j => j.status === 'in_progress');
-                    const scheduledJobs = jobs.filter(j => j.status === 'scheduled');
-                    
-                    if (inProgressJob) {
-                        currentJob = inProgressJob;
-                        showCurrentJob(inProgressJob);
-                    } else {
-                        currentJob = null;
-                        document.getElementById('currentJobSection').style.display = 'none';
-                    }
-                    
-                    const jobsList = document.getElementById('jobsList');
-                    
-                    if (scheduledJobs.length === 0) {
-                        jobsList.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary); padding: 2rem;">No upcoming jobs</p>';
-                        return;
-                    }
-                    
-                    jobsList.innerHTML = scheduledJobs.map(job => `
-                        <div class="card" style="padding: 1rem; margin-bottom: 1rem; cursor: pointer;" onclick="selectJob(${job.id})">
-                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                                <div>
-                                    <div style="font-size: 1.25rem; font-weight: bold; color: var(--color-primary);">${escapeHtml(job.order_number)}</div>
-                                    <div style="color: var(--color-text-secondary); font-size: 0.9rem;">${escapeHtml(job.customer_name)}</div>
-                                </div>
-                                <span class="badge badge-info">Scheduled</span>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.9rem; margin-bottom: 1rem;">
-                                <div><strong>Product:</strong> ${escapeHtml(job.product_name || 'N/A')}</div>
-                                <div><strong>Quantity:</strong> ${job.scheduled_quantity}</div>
-                                <div><strong>Stage:</strong> ${escapeHtml(job.stage_name || 'N/A')}</div>
-                                <div><strong>Machine:</strong> ${escapeHtml(job.machine_name || 'N/A')}</div>
-                            </div>
-                            <button class="btn btn-success" onclick="event.stopPropagation(); startJob(${job.id})" style="width: 100%; min-height: 48px;">
-                                Start Job
-                            </button>
-                        </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Error loading jobs:', error);
-                showAlert('Failed to load jobs', 'danger');
-            }
-        }
-        
-        function showCurrentJob(job) {
-            document.getElementById('currentJobSection').style.display = 'block';
-            document.getElementById('currentJobNumber').textContent = job.order_number;
-            document.getElementById('currentCustomer').textContent = job.customer_name || '-';
-            document.getElementById('currentProduct').textContent = job.product_name || '-';
-            document.getElementById('currentScheduledQty').textContent = job.scheduled_quantity || '-';
-            document.getElementById('currentStage').textContent = job.stage_name || 'N/A';
-            document.getElementById('currentMachine').textContent = job.machine_name || 'No Machine';
-            
-            const produced = job.actual_quantity || 0;
-            const remaining = (job.scheduled_quantity || 0) - produced;
-            document.getElementById('producedQty').textContent = produced;
-            document.getElementById('remainingQty').textContent = remaining > 0 ? remaining : 0;
-        }
-        
-        async function startJob(jobId) {
-            try {
-                const response = await API.operator.startJob(jobId, {});
-                
-                if (response.success) {
-                    showAlert('Job started successfully', 'success');
-                    loadJobs();
-                }
-            } catch (error) {
-                showAlert(error.message || 'Failed to start job', 'danger');
-            }
-        }
-        
-        function completeJobPrompt(jobId, scheduledQty) {
-            document.getElementById('completingJobId').value = jobId;
-            document.getElementById('actualQuantity').value = scheduledQty;
-            showModal('completeJobModal');
-        }
-        
-        document.getElementById('completeJobForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const jobId = document.getElementById('completingJobId').value;
-            const data = {
-                actual_quantity: parseInt(document.getElementById('actualQuantity').value),
-                notes: document.getElementById('jobNotes').value
-            };
-            
-            try {
-                const response = await API.operator.completeJob(jobId, data);
-                
-                if (response.success) {
-                    showAlert('Job completed successfully', 'success');
-                    hideModal('completeJobModal');
-                    resetForm('completeJobForm');
-                    loadJobs();
-                }
-            } catch (error) {
-                showAlert(error.message || 'Failed to complete job', 'danger');
-            }
-        });
-        
-        document.getElementById('manualJobForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const data = {
-                order_number: document.getElementById('orderNumber').value
-            };
-            
-            try {
-                const response = await API.operator.addManualJob(data);
-                
-                if (response.success) {
-                    showAlert('Job added successfully', 'success');
-                    hideModal('manualJobModal');
-                    resetForm('manualJobForm');
-                    loadJobs();
-                }
-            } catch (error) {
-                showAlert(error.message || 'Failed to add job', 'danger');
-            }
-        });
-        
-        window.addEventListener('online', () => {
-            document.getElementById('offlineIndicator').style.display = 'none';
-            const statusIndicator = document.querySelector('.status-indicator');
-            if (statusIndicator) {
-                statusIndicator.className = 'status-indicator online';
-            }
-            loadJobs();
-        });
-        
-        window.addEventListener('offline', () => {
-            document.getElementById('offlineIndicator').style.display = 'block';
-            const statusIndicator = document.querySelector('.status-indicator');
-            if (statusIndicator) {
-                statusIndicator.className = 'status-indicator offline';
-            }
-        });
-        
-        if (!navigator.onLine) {
-            document.getElementById('offlineIndicator').style.display = 'block';
-            const statusIndicator = document.querySelector('.status-indicator');
-            if (statusIndicator) {
-                statusIndicator.className = 'status-indicator offline';
-            }
-        }
-        
-        loadJobs();
-        setInterval(loadJobs, 30000);
-    </script>
+    <script src="/static/js/modules/operator-dashboard.js"></script>
 </body>
 </html>

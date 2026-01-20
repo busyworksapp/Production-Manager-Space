@@ -20,27 +20,27 @@
             </nav>
             <div class="user-menu">
                 <div class="notification-badge">
-                    <span class="badge" style="display: none;">0</span>
+                    <span class="badge hidden-badge">0</span>
                     <span>🔔</span>
                 </div>
                 <span id="username"></span>
-                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+                <button class="btn btn-sm btn-secondary logout-btn">Logout</button>
             </div>
         </div>
     </div>
     
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div class="page-header-flex">
             <h1>Orders</h1>
-            <div style="display: flex; gap: 1rem;">
+            <div class="page-actions-group">
                 <button class="btn btn-secondary">Import Orders</button>
-                <button class="btn btn-primary" onclick="showModal('addOrderModal')">Add Order</button>
+                <button class="btn btn-primary add-order-btn">Add Order</button>
             </div>
         </div>
         
-        <div class="card" style="margin-bottom: 1rem;">
-            <div style="display: flex; gap: 1rem;">
-                <select id="statusFilter" class="form-select" style="max-width: 200px;" onchange="loadOrders()">
+        <div class="card card-margin-bottom">
+            <div class="filter-group">
+                <select id="statusFilter" class="form-select filter-select">
                     <option value="">All Statuses</option>
                     <option value="unscheduled">Unscheduled</option>
                     <option value="scheduled">Scheduled</option>
@@ -49,7 +49,7 @@
                     <option value="on_hold">On Hold</option>
                 </select>
                 
-                <input type="text" id="customerSearch" class="form-input" placeholder="Search customer..." style="max-width: 300px;">
+                <input type="text" id="customerSearch" class="form-input search-input" placeholder="Search customer...">
             </div>
         </div>
         
@@ -125,85 +125,142 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="hideModal('addOrderModal')">Cancel</button>
+                    <button type="button" class="btn btn-secondary close-modal-btn" data-modal="addOrderModal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
         </div>
     </div>
     
+    <div id="orderItemsModal" class="modal">
+        <div class="modal-content modal-content-wide">
+            <div class="modal-header">Manage Order Items</div>
+            <div class="card-margin-bottom">
+                <button class="btn btn-primary btn-sm add-item-btn">Add Item</button>
+            </div>
+            
+            <div id="itemFormContainer" class="item-form-container">
+                <h3 id="itemFormTitle">Add Item</h3>
+                <form id="itemForm">
+                    <input type="hidden" id="itemId">
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Product*</label>
+                            <select id="itemProductId" class="form-select" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Quantity*</label>
+                            <input type="number" id="itemQuantity" class="form-input" required min="1">
+                        </div>
+                    </div>
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Unit Price</label>
+                            <input type="number" id="itemUnitPrice" class="form-input" step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Specifications</label>
+                            <input type="text" id="itemSpecifications" class="form-input">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                        <button type="button" class="btn btn-secondary btn-sm cancel-item-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="orderItemsTable">
+                    <tr><td colspan="6" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn" data-modal="orderItemsModal">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="productionPathModal" class="modal">
+        <div class="modal-content modal-content-extra-wide">
+            <div class="modal-header">Manage Production Path</div>
+            <div class="card-margin-bottom">
+                <button class="btn btn-primary btn-sm add-path-step-btn">Add Step</button>
+            </div>
+            
+            <div id="pathStepFormContainer" class="item-form-container">
+                <h3 id="pathStepFormTitle">Add Production Step</h3>
+                <form id="pathStepForm">
+                    <input type="hidden" id="pathStepId">
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Department*</label>
+                            <select id="pathDepartmentId" class="form-select" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Stage</label>
+                            <select id="pathStageId" class="form-select"></select>
+                        </div>
+                    </div>
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Estimated Duration (minutes)</label>
+                            <input type="number" id="pathEstimatedDuration" class="form-input" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="pathIsRequired" checked>
+                                Required Step
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea id="pathNotes" class="form-textarea"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                        <button type="button" class="btn btn-secondary btn-sm cancel-path-step-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Sequence</th>
+                        <th>Department</th>
+                        <th>Stage</th>
+                        <th>Duration</th>
+                        <th>Required</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productionPathTable">
+                    <tr><td colspan="6" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn" data-modal="productionPathModal">Close</button>
+            </div>
+        </div>
+    </div>
+    
     <script src="/static/js/api.js"></script>
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/utils.js"></script>
-    <script>
-        async function loadOrders() {
-            const user = getCurrentUser();
-            if (user) {
-                document.getElementById('username').textContent = `${user.first_name} ${user.last_name}`;
-            }
-            
-            const status = document.getElementById('statusFilter').value;
-            const params = status ? { status } : {};
-            
-            try {
-                const response = await API.orders.getAll(params);
-                
-                if (response.success) {
-                    const tbody = document.getElementById('ordersTable');
-                    tbody.innerHTML = response.data.map(order => `
-                        <tr>
-                            <td>${order.order_number}</td>
-                            <td>${order.customer_name}</td>
-                            <td>${order.product_name || 'N/A'}</td>
-                            <td>${order.quantity}</td>
-                            <td>${formatCurrency(order.order_value)}</td>
-                            <td>
-                                Start: ${formatDate(order.start_date)}<br>
-                                End: ${formatDate(order.end_date)}
-                            </td>
-                            <td>${createStatusBadge(order.status)}</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="viewOrder(${order.id})">View</button>
-                                <button class="btn btn-sm btn-success" onclick="scheduleOrder(${order.id})">Schedule</button>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Error loading orders:', error);
-                showAlert('Failed to load orders', 'danger');
-            }
-        }
-        
-        document.getElementById('orderForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const data = {
-                order_number: document.getElementById('orderNumber').value,
-                sales_order_number: document.getElementById('salesOrderNumber').value,
-                customer_name: document.getElementById('customerName').value,
-                quantity: parseInt(document.getElementById('quantity').value),
-                order_value: parseFloat(document.getElementById('orderValue').value) || null,
-                start_date: document.getElementById('startDate').value || null,
-                end_date: document.getElementById('endDate').value || null,
-                notes: document.getElementById('notes').value
-            };
-            
-            try {
-                const response = await API.orders.create(data);
-                
-                if (response.success) {
-                    showAlert('Order created successfully', 'success');
-                    hideModal('addOrderModal');
-                    resetForm('orderForm');
-                    loadOrders();
-                }
-            } catch (error) {
-                showAlert(error.message || 'Failed to create order', 'danger');
-            }
-        });
-        
-        loadOrders();
-    </script>
+    <script src="/static/js/modules/orders.js"></script>
 </body>
 </html>

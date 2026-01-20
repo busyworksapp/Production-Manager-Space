@@ -55,6 +55,19 @@ def create_replacement_ticket():
     
     ticket_number = f"RT-{datetime.now().strftime('%Y%m%d%H%M%S')}"
     
+    order_item_id = data.get('order_item_id')
+    product_id = data.get('product_id')
+    
+    if order_item_id:
+        item = execute_query(
+            "SELECT product_id FROM order_items WHERE id = %s AND order_id = %s",
+            (order_item_id, data['order_id']),
+            fetch_one=True
+        )
+        if not item:
+            return error_response('Order item not found', 404)
+        product_id = item['product_id']
+    
     query = """
         INSERT INTO replacement_tickets
         (ticket_number, order_id, product_id, quantity_rejected, department_id,
@@ -62,13 +75,20 @@ def create_replacement_ticket():
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     
+    ticket_config = data.get('config', {})
+    if order_item_id:
+        if isinstance(ticket_config, str):
+            import json
+            ticket_config = json.loads(ticket_config) if ticket_config else {}
+        ticket_config['order_item_id'] = order_item_id
+    
     try:
         ticket_id = execute_query(
             query,
             (
                 ticket_number,
                 data['order_id'],
-                data.get('product_id'),
+                product_id,
                 data['quantity_rejected'],
                 data['department_id'],
                 data.get('stage_id'),
@@ -76,10 +96,20 @@ def create_replacement_ticket():
                 data['rejection_type'],
                 user_id,
                 data.get('notes'),
-                data.get('config')
+                ticket_config
             ),
             commit=True
         )
+        
+        material_cost = calculate_defect_cost(product_id, data['quantity_rejected'])
+        
+        if material_cost > 0:
+            update_query = """
+                UPDATE replacement_tickets 
+                SET config = JSON_SET(COALESCE(config, '{}'), '$.material_cost', %s)
+                WHERE id = %s
+            """
+            execute_query(update_query, (material_cost, ticket_id), commit=True)
         
         dept_manager_query = "SELECT manager_id FROM departments WHERE id = %s"
         dept = execute_query(dept_manager_query, (data['department_id'],), fetch_one=True)
@@ -89,7 +119,7 @@ def create_replacement_ticket():
                 dept['manager_id'],
                 'replacement_ticket',
                 'New Replacement Ticket',
-                f'A new replacement ticket {ticket_number} requires your approval',
+                f'A new replacement ticket {ticket_number} requires your approval (Material Cost: R{material_cost:.2f})',
                 'replacement_ticket',
                 ticket_id,
                 f'/defects/replacement-tickets/{ticket_id}',
@@ -98,10 +128,36 @@ def create_replacement_ticket():
         
         log_audit(user_id, 'CREATE', 'replacement_ticket', ticket_id, None, data)
         
-        return success_response({'id': ticket_id, 'ticket_number': ticket_number}, 
-                              'Replacement ticket created successfully', 201)
+        return success_response({
+            'id': ticket_id, 
+            'ticket_number': ticket_number,
+            'material_cost': material_cost
+        }, 'Replacement ticket created successfully', 201)
     except Exception as e:
         return error_response(str(e), 500)
+
+
+def calculate_defect_cost(product_id, quantity):
+    """Calculate material cost impact from BOM for given product and quantity"""
+    if not product_id or not quantity:
+        return 0.0
+    
+    bom_query = """
+        SELECT SUM(bi.total_cost) as unit_cost
+        FROM bom b
+        JOIN bom_items bi ON b.id = bi.bom_id
+        WHERE b.product_id = %s AND b.is_active = TRUE
+        GROUP BY b.id
+        ORDER BY b.effective_date DESC
+        LIMIT 1
+    """
+    
+    bom_result = execute_query(bom_query, (product_id,), fetch_one=True)
+    
+    if bom_result and bom_result['unit_cost']:
+        return float(bom_result['unit_cost']) * float(quantity)
+    
+    return 0.0
 
 @defects_bp.route('/replacement-tickets/<int:id>/approve', methods=['POST'])
 @token_required
@@ -221,6 +277,19 @@ def create_customer_return():
     
     return_number = f"CR-{datetime.now().strftime('%Y%m%d%H%M%S')}"
     
+    order_item_id = data.get('order_item_id')
+    product_id = data.get('product_id')
+    
+    if order_item_id:
+        item = execute_query(
+            "SELECT product_id FROM order_items WHERE id = %s AND order_id = %s",
+            (order_item_id, data['order_id']),
+            fetch_one=True
+        )
+        if not item:
+            return error_response('Order item not found', 404)
+        product_id = item['product_id']
+    
     query = """
         INSERT INTO customer_returns
         (return_number, order_id, product_id, quantity_returned, return_reason,
@@ -228,13 +297,20 @@ def create_customer_return():
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     
+    return_config = data.get('config', {})
+    if order_item_id:
+        if isinstance(return_config, str):
+            import json
+            return_config = json.loads(return_config) if return_config else {}
+        return_config['order_item_id'] = order_item_id
+    
     try:
         return_id = execute_query(
             query,
             (
                 return_number,
                 data['order_id'],
-                data.get('product_id'),
+                product_id,
                 data['quantity_returned'],
                 data['return_reason'],
                 data.get('customer_complaint'),
@@ -242,14 +318,27 @@ def create_customer_return():
                 data['return_type'],
                 user_id,
                 data.get('notes'),
-                data.get('config')
+                return_config
             ),
             commit=True
         )
         
+        material_cost = calculate_defect_cost(product_id, data['quantity_returned'])
+        
+        if material_cost > 0:
+            update_query = """
+                UPDATE customer_returns 
+                SET config = JSON_SET(COALESCE(config, '{}'), '$.material_cost', %s)
+                WHERE id = %s
+            """
+            execute_query(update_query, (material_cost, return_id), commit=True)
+        
         log_audit(user_id, 'CREATE', 'customer_return', return_id, None, data)
         
-        return success_response({'id': return_id, 'return_number': return_number},
-                              'Customer return recorded successfully', 201)
+        return success_response({
+            'id': return_id, 
+            'return_number': return_number,
+            'material_cost': material_cost
+        }, 'Customer return recorded successfully', 201)
     except Exception as e:
         return error_response(str(e), 500)

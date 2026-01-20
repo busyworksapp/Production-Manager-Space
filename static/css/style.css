@@ -855,3 +855,622 @@ body {
 .status-indicator.idle {
     background-color: var(--color-warning);
 }
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: var(--color-bg-main);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-white);
+    font-weight: 600;
+}
+
+.progress-success {
+    background-color: var(--color-success);
+}
+
+.progress-info {
+    background-color: var(--color-info);
+}
+
+.progress-warning {
+    background-color: var(--color-warning);
+}
+
+.progress-danger {
+    background-color: var(--color-danger);
+}
+
+.stat-card.stat-danger {
+    border-color: var(--color-danger);
+    border-width: 2px;
+}
+
+.stat-card.stat-danger .stat-value {
+    color: var(--color-danger);
+}
+
+.stat-card.stat-warning {
+    border-color: var(--color-warning);
+    border-width: 2px;
+}
+
+.stat-card.stat-warning .stat-value {
+    color: var(--color-warning);
+}
+
+.text-danger {
+    color: var(--color-danger);
+    font-weight: 600;
+}
+
+.btn-group {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.login-container {
+    max-width: 400px;
+    margin-top: 100px;
+}
+
+.login-card-header {
+    text-align: center;
+}
+
+.login-btn {
+    width: 100%;
+}
+
+.login-error {
+    margin-top: 1rem;
+}
+
+.dashboard-title {
+    margin-bottom: 2rem;
+}
+
+.dashboard-grid-spacing {
+    margin-top: 2rem;
+}
+
+.dashboard-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.dashboard-item-timestamp {
+    color: var(--color-text-secondary);
+}
+
+.hidden-badge {
+    display: none;
+}
+
+.logout-btn {
+    cursor: pointer;
+}
+
+.operator-offline-indicator {
+    display: none;
+}
+
+.operator-employee-type {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.operator-header-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.operator-dept-info {
+    font-size: 0.9rem;
+}
+
+.operator-logout-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.operator-content {
+    padding: var(--spacing-md);
+}
+
+.operator-current-job-hidden {
+    display: none;
+}
+
+.operator-jobs-section {
+    margin-top: 2rem;
+}
+
+.operator-jobs-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    color: var(--color-text-primary);
+}
+
+.operator-stepper-input {
+    border: 2px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background-color: white;
+}
+
+.operator-stepper-help {
+    color: var(--color-text-secondary);
+    display: block;
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+.operator-notes-textarea {
+    min-height: 80px;
+}
+
+.operator-complete-btn {
+    min-height: 56px;
+}
+
+.no-jobs-message {
+    text-align: center;
+    color: var(--color-text-secondary);
+    padding: 2rem;
+}
+
+.job-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+}
+
+.job-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 0.5rem;
+}
+
+.job-order-number {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--color-primary);
+}
+
+.job-customer-name {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+.job-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.start-job-btn {
+    width: 100%;
+    min-height: 48px;
+}
+
+.operator-login-body {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #1F618D 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+}
+
+.operator-login-container {
+    background-color: white;
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+}
+
+.operator-login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.operator-login-logo {
+    font-size: 3rem;
+    font-weight: bold;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+}
+
+.operator-login-subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1.1rem;
+}
+
+.employee-number-input {
+    font-size: 1.5rem;
+    text-align: center;
+    padding: 1.25rem;
+    border: 2px solid var(--color-border);
+    border-radius: var(--border-radius);
+    width: 100%;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.employee-number-input:focus {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.operator-login-btn {
+    width: 100%;
+    min-height: 60px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    background-color: var(--color-success);
+    border: none;
+    border-radius: var(--border-radius);
+    color: white;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.2s;
+}
+
+.operator-login-btn:hover {
+    background-color: #1E8449;
+}
+
+.operator-login-btn:active {
+    transform: scale(0.98);
+}
+
+.operator-login-btn:disabled {
+    background-color: var(--color-border);
+    cursor: not-allowed;
+}
+
+.operator-info-text {
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.operator-emp-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.operator-error-hidden {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    .operator-login-container {
+        padding: 1.5rem;
+    }
+    .operator-login-logo {
+        font-size: 2.5rem;
+    }
+}
+
+.schedule-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.schedule-header-no-margin {
+    margin: 0;
+}
+
+.order-details-box {
+    display: none;
+    background: var(--color-bg-main);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.capacity-validation-hidden {
+    display: none;
+}
+
+.schedule-new-job-btn {
+    cursor: pointer;
+}
+
+.close-schedule-modal-btn {
+    cursor: pointer;
+}
+
+.capacity-card {
+    padding: 1rem;
+    margin: 0;
+}
+
+.capacity-card-title {
+    font-weight: bold;
+}
+
+.capacity-stats {
+    margin-top: 0.5rem;
+}
+
+.capacity-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+}
+
+.capacity-bar-bg {
+    background: var(--color-bg-main);
+    height: 8px;
+    border-radius: 4px;
+    margin-top: 0.25rem;
+}
+
+.capacity-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+}
+
+.capacity-bar-danger {
+    background: var(--color-danger);
+}
+
+.capacity-bar-warning {
+    background: var(--color-warning);
+}
+
+.capacity-bar-success {
+    background: var(--color-success);
+}
+
+.schedule-table-center {
+    text-align: center;
+}
+
+.availability-legend {
+    color: var(--color-text-secondary);
+    display: block;
+    margin-top: 0.25rem;
+}
+
+.capacity-alternatives-btn {
+    margin-left: 1rem;
+}
+
+.alternatives-modal-wide {
+    max-width: 800px;
+}
+
+.alt-section-title {
+    font-size: 1.25rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.alt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.alt-option-card {
+    border: 1px solid var(--color-border);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.alt-option-card:hover {
+    border-color: var(--color-primary);
+    background-color: var(--color-bg-main);
+}
+
+.alt-no-alternatives {
+    text-align: center;
+    color: var(--color-text-secondary);
+    padding: 1rem;
+}
+
+.page-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.page-actions-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.filter-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.filter-select {
+    max-width: 200px;
+}
+
+.search-input {
+    max-width: 300px;
+}
+
+.card-margin-bottom {
+    margin-bottom: 1rem;
+}
+
+.card-margin-bottom-lg {
+    margin-bottom: 1.5rem;
+}
+
+.card-margin-top-lg {
+    margin-top: 1.5rem;
+}
+
+.item-form-container {
+    display: none;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.item-form-container.active {
+    display: block;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.modal-content-wide {
+    max-width: 900px;
+}
+
+.modal-content-extra-wide {
+    max-width: 1000px;
+}
+
+.modal-content-ultra-wide {
+    max-width: 1200px;
+}
+
+.validate-modal-wide {
+    max-width: 800px;
+}
+
+.form-group-align-end {
+    display: flex;
+    align-items: flex-end;
+}
+
+.btn-full-width {
+    width: 100%;
+}
+
+.capacity-overview-grid {
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.empty-state-center {
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.progress-bar {
+    background: var(--color-bg-main);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-success {
+    background: var(--color-success);
+}
+
+.progress-info {
+    background: var(--color-info);
+}
+
+.progress-warning {
+    background: var(--color-warning);
+}
+
+.progress-danger {
+    background: var(--color-danger);
+}
+
+.utilization-flex {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.utilization-bar {
+    flex: 1;
+}
+
+.utilization-value {
+    min-width: 45px;
+}
+
+.validation-results-hidden {
+    display: none;
+}
+
+.validation-results-visible {
+    display: block;
+    margin-top: 1rem;
+}
+
+.validation-bar-container {
+    width: 200px;
+}
+
+.table-center-text {
+    text-align: center;
+}
+
+.return-details-section {
+    margin-top: 1rem;
+}
+
+.badge-hidden {
+    display: none;
+}
+
+.tab-content-hidden {
+    display: none;
+}
+
+.job-details-panel {
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.job-details-hidden {
+    display: none;
+}
+
+.overview-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+}

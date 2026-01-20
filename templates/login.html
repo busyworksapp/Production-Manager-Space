@@ -7,9 +7,9 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <div class="container" style="max-width: 400px; margin-top: 100px;">
+    <div class="container login-container">
         <div class="card">
-            <div class="card-header" style="text-align: center;">
+            <div class="card-header login-card-header">
                 Production Management System
             </div>
             
@@ -24,39 +24,14 @@
                     <input type="password" id="password" class="form-input" required>
                 </div>
                 
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+                <button type="submit" class="btn btn-primary login-btn">Login</button>
             </form>
             
-            <div id="loginError" class="alert alert-danger hidden" style="margin-top: 1rem;"></div>
+            <div id="loginError" class="alert alert-danger hidden login-error"></div>
         </div>
     </div>
     
     <script src="/static/js/api.js"></script>
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('loginError');
-            
-            try {
-                const response = await API.auth.login({ username, password });
-                
-                if (response.success) {
-                    localStorage.setItem('token', response.data.token);
-                    localStorage.setItem('user', JSON.stringify(response.data.user));
-                    window.location.href = '/dashboard';
-                }
-            } catch (error) {
-                errorDiv.textContent = error.message || 'Invalid username or password';
-                errorDiv.classList.remove('hidden');
-            }
-        });
-        
-        if (localStorage.getItem('token')) {
-            window.location.href = '/dashboard';
-        }
-    </script>
+    <script src="/static/js/modules/login.js"></script>
 </body>
 </html>

@@ -285,6 +285,25 @@ def schedule_order(id):
         if machine['status'] in ['maintenance', 'broken', 'retired']:
             return error_response(f'Machine is not available - current status: {machine["status"]}', 400)
         
+        pm_schedule = execute_query(
+            """SELECT schedule_name, next_due_at, estimated_duration_minutes
+               FROM preventive_maintenance_schedules
+               WHERE machine_id = %s
+               AND is_active = TRUE
+               AND DATE(next_due_at) = %s""",
+            (data['machine_id'], data['scheduled_date']),
+            fetch_one=True
+        )
+        
+        if pm_schedule:
+            duration = pm_schedule.get('estimated_duration_minutes', 0)
+            duration_hours = duration / 60 if duration else 'unknown'
+            return error_response(
+                f'Machine has preventive maintenance scheduled on this date: {pm_schedule["schedule_name"]} '
+                f'(estimated duration: {duration_hours} hours). Please select a different date.',
+                400
+            )
+        
         conflicting_jobs = execute_query(
             """SELECT COUNT(*) as count FROM job_schedules 
                WHERE machine_id = %s 

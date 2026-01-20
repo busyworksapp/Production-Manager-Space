@@ -20,11 +20,11 @@
             </nav>
             <div class="user-menu">
                 <div class="notification-badge">
-                    <span class="badge hidden">0</span>
+                    <span class="badge badge-hidden">0</span>
                     <span>🔔</span>
                 </div>
                 <span id="username"></span>
-                <button class="btn btn-sm btn-secondary" id="logoutBtn">Logout</button>
+                <button class="btn btn-sm btn-secondary logout-btn">Logout</button>
             </div>
         </div>
     </div>
@@ -32,7 +32,7 @@
     <div class="container">
         <h1 id="departmentTitle">Department Dashboard</h1>
         
-        <div class="grid grid-4 mt-2">
+        <div class="grid grid-4 card-margin-top-lg">
             <div class="stat-card">
                 <div class="stat-value" id="totalEmployees">0</div>
                 <div class="stat-label">Total Employees</div>
@@ -51,16 +51,16 @@
             </div>
         </div>
         
-        <div class="tabs mt-2">
+        <div class="tabs card-margin-top-lg">
             <button class="tab-button active" data-tab="allocations">Employee-Machine Allocations</button>
             <button class="tab-button" data-tab="jobs">Job Management</button>
             <button class="tab-button" data-tab="overview">Department Overview</button>
         </div>
         
         <div id="allocationsTab" class="tab-content">
-            <div class="flex-between mb-2">
+            <div class="page-header-flex card-margin-bottom">
                 <h2>Employee-Machine Allocations</h2>
-                <button class="btn btn-primary" id="addAllocationBtn">Allocate Employee</button>
+                <button class="btn btn-primary add-allocation-btn">Allocate Employee</button>
             </div>
             
             <div class="card">
@@ -83,10 +83,10 @@
             </div>
         </div>
         
-        <div id="jobsTab" class="tab-content hidden">
-            <div class="flex-between mb-2">
+        <div id="jobsTab" class="tab-content tab-content-hidden">
+            <div class="page-header-flex card-margin-bottom">
                 <h2>Department Jobs</h2>
-                <button class="btn btn-primary" id="assignJobBtn">Assign Job</button>
+                <button class="btn btn-primary assign-job-btn">Assign Job</button>
             </div>
             
             <div class="card">
@@ -111,8 +111,8 @@
             </div>
         </div>
         
-        <div id="overviewTab" class="tab-content hidden">
-            <div class="grid grid-2 mt-2">
+        <div id="overviewTab" class="tab-content tab-content-hidden">
+            <div class="grid grid-2 card-margin-top-lg">
                 <div class="card">
                     <div class="card-header">Employees</div>
                     <div id="employeesList">Loading...</div>
@@ -124,7 +124,7 @@
                 </div>
             </div>
             
-            <div class="card mt-2">
+            <div class="card card-margin-top-lg">
                 <div class="card-header">Production Stages</div>
                 <div id="stagesList">Loading...</div>
             </div>
@@ -176,8 +176,8 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-modal-close="addAllocationModal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="saveAllocationBtn">Save Allocation</button>
+                    <button type="button" class="btn btn-secondary close-allocation-modal-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Allocation</button>
                 </div>
             </form>
         </div>
@@ -224,7 +224,7 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-modal-close="editAllocationModal">Cancel</button>
+                    <button type="button" class="btn btn-secondary close-edit-allocation-modal-btn">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Allocation</button>
                 </div>
             </form>
@@ -244,7 +244,7 @@
                     </select>
                 </div>
                 
-                <div id="jobDetails" class="job-details-panel hidden">
+                <div id="jobDetails" class="job-details-panel job-details-hidden">
                     <p><strong>Order:</strong> <span id="jobOrderNumber"></span></p>
                     <p><strong>Product:</strong> <span id="jobProductName"></span></p>
                     <p><strong>Current Status:</strong> <span id="jobCurrentStatus"></span></p>
@@ -270,8 +270,8 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-modal-close="assignJobModal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="saveJobBtn">Assign Job</button>
+                    <button type="button" class="btn btn-secondary close-assign-job-modal-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Assign Job</button>
                 </div>
             </form>
         </div>
@@ -280,413 +280,6 @@
     <script src="/static/js/api.js"></script>
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/utils.js"></script>
-    <script type="module">
-        import { ManagerDashboard } from '/static/js/modules/manager.js';
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            new ManagerDashboard();
-        });
-    </script>
-</body>
-</html>
-            const allocationsTab = document.getElementById('allocationsTab');
-            const jobsTab = document.getElementById('jobsTab');
-            const overviewTab = document.getElementById('overviewTab');
-            const buttons = document.querySelectorAll('.tab-button');
-            
-            buttons.forEach(btn => btn.classList.remove('active'));
-            
-            if (tab === 'allocations') {
-                allocationsTab.style.display = 'block';
-                jobsTab.style.display = 'none';
-                overviewTab.style.display = 'none';
-                buttons[0].classList.add('active');
-            } else if (tab === 'jobs') {
-                allocationsTab.style.display = 'none';
-                jobsTab.style.display = 'block';
-                overviewTab.style.display = 'none';
-                buttons[1].classList.add('active');
-                loadDepartmentJobs();
-            } else {
-                allocationsTab.style.display = 'none';
-                jobsTab.style.display = 'none';
-                overviewTab.style.display = 'block';
-                buttons[2].classList.add('active');
-                loadDepartmentOverview();
-            }
-        }
-        
-        async function loadDepartmentData() {
-            const user = getCurrentUser();
-            if (user) {
-                document.getElementById('username').textContent = `${user.first_name} ${user.last_name}`;
-            }
-            
-            try {
-                const response = await fetch('/api/manager-controls/my-department', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    departmentData = data.data;
-                    
-                    document.getElementById('departmentTitle').textContent = `${departmentData.name} - Manager Dashboard`;
-                    document.getElementById('totalEmployees').textContent = departmentData.employees?.length || 0;
-                    document.getElementById('totalMachines').textContent = departmentData.machines?.length || 0;
-                    
-                    populateEmployeeSelect();
-                    populateMachineSelect();
-                    loadAllocations();
-                    loadDepartmentStats();
-                } else {
-                    showAlert(data.message || 'Failed to load department data', 'danger');
-                }
-            } catch (error) {
-                console.error('Error loading department data:', error);
-                showAlert('Failed to load department data', 'danger');
-            }
-        }
-        
-        function populateEmployeeSelect() {
-            const selects = [document.getElementById('employeeId'), document.getElementById('assignEmployee')];
-            
-            selects.forEach(select => {
-                select.innerHTML = '<option value="">Select Employee</option>';
-                departmentData.employees?.forEach(emp => {
-                    const option = document.createElement('option');
-                    option.value = emp.id;
-                    option.textContent = `${emp.first_name} ${emp.last_name} (${emp.employee_number})`;
-                    select.appendChild(option);
-                });
-            });
-        }
-        
-        function populateMachineSelect() {
-            const selects = [document.getElementById('machineId'), document.getElementById('assignMachine')];
-            
-            selects.forEach(select => {
-                select.innerHTML = '<option value="">Select Machine</option>';
-                departmentData.machines?.forEach(machine => {
-                    const option = document.createElement('option');
-                    option.value = machine.id;
-                    option.textContent = `${machine.machine_name} (${machine.machine_number})`;
-                    select.appendChild(option);
-                });
-            });
-        }
-        
-        async function loadAllocations() {
-            try {
-                const response = await fetch('/api/manager-controls/employee-machine-allocations', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    const tbody = document.getElementById('allocationsTable');
-                    tbody.innerHTML = data.data.map(allocation => `
-                        <tr>
-                            <td>${allocation.employee_name} (${allocation.employee_number})</td>
-                            <td>${allocation.machine_name} (${allocation.machine_number})</td>
-                            <td>${allocation.allocation_type}</td>
-                            <td>${allocation.start_date}</td>
-                            <td>${allocation.end_date || 'N/A'}</td>
-                            <td>${createStatusBadge(allocation.is_active ? 'active' : 'inactive')}</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="editAllocation(${allocation.id})">Edit</button>
-                                <button class="btn btn-sm ${allocation.is_active ? 'btn-warning' : 'btn-success'}" onclick="toggleAllocation(${allocation.id}, ${allocation.is_active})">${allocation.is_active ? 'Deactivate' : 'Activate'}</button>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Error loading allocations:', error);
-                showAlert('Failed to load allocations', 'danger');
-            }
-        }
-        
-        async function loadDepartmentStats() {
-            try {
-                const response = await fetch('/api/manager-controls/department-stats', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    const stats = data.data;
-                    document.getElementById('activeJobs').textContent = stats.active_jobs || 0;
-                    document.getElementById('pendingJobs').textContent = stats.pending_jobs || 0;
-                }
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
-        
-        async function loadDepartmentJobs() {
-            try {
-                const response = await fetch('/api/manager-controls/department-jobs', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    departmentJobs = data.data;
-                    const tbody = document.getElementById('jobsTable');
-                    tbody.innerHTML = data.data.map(job => `
-                        <tr>
-                            <td>${job.id}</td>
-                            <td>${job.order_number}</td>
-                            <td>${job.product_name}</td>
-                            <td>${job.stage_name || 'N/A'}</td>
-                            <td>${job.assigned_employee_name || 'Unassigned'}</td>
-                            <td>${job.machine_name || 'N/A'}</td>
-                            <td>${job.scheduled_date}</td>
-                            <td>${createStatusBadge(job.status)}</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="reassignJob(${job.id})">Reassign</button>
-                            </td>
-                        </tr>
-                    `).join('');
-                    
-                    const jobSelect = document.getElementById('jobSelect');
-                    jobSelect.innerHTML = '<option value="">Select Job</option>';
-                    data.data.forEach(job => {
-                        const option = document.createElement('option');
-                        option.value = job.id;
-                        option.textContent = `Job #${job.id} - ${job.order_number} (${job.status})`;
-                        option.dataset.job = JSON.stringify(job);
-                        jobSelect.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading jobs:', error);
-                showAlert('Failed to load jobs', 'danger');
-            }
-        }
-        
-        async function loadDepartmentOverview() {
-            if (!departmentData) return;
-            
-            const employeesList = document.getElementById('employeesList');
-            employeesList.innerHTML = departmentData.employees?.map(emp => `
-                <div style="padding: 0.5rem; border-bottom: 1px solid var(--color-border);">
-                    <strong>${emp.first_name} ${emp.last_name}</strong><br>
-                    <small>${emp.employee_number} - ${emp.employee_type || 'N/A'}</small>
-                </div>
-            `).join('') || 'No employees';
-            
-            const machinesList = document.getElementById('machinesList');
-            machinesList.innerHTML = departmentData.machines?.map(machine => `
-                <div style="padding: 0.5rem; border-bottom: 1px solid var(--color-border);">
-                    <strong>${machine.machine_name}</strong><br>
-                    <small>${machine.machine_number} - ${createStatusBadge(machine.status)}</small>
-                </div>
-            `).join('') || 'No machines';
-            
-            const stagesList = document.getElementById('stagesList');
-            stagesList.innerHTML = departmentData.production_stages?.map(stage => `
-                <div style="padding: 0.5rem; border-bottom: 1px solid var(--color-border);">
-                    <strong>${stage.stage_name}</strong> (Order: ${stage.stage_order})<br>
-                    <small>${stage.description || 'No description'}</small>
-                </div>
-            `).join('') || 'No production stages';
-        }
-        
-        function loadJobDetails() {
-            const select = document.getElementById('jobSelect');
-            const selectedOption = select.options[select.selectedIndex];
-            
-            if (selectedOption.value) {
-                const job = JSON.parse(selectedOption.dataset.job);
-                document.getElementById('jobDetails').style.display = 'block';
-                document.getElementById('jobOrderNumber').textContent = job.order_number;
-                document.getElementById('jobProductName').textContent = job.product_name;
-                document.getElementById('jobCurrentStatus').textContent = job.status;
-                document.getElementById('jobId').value = job.id;
-            } else {
-                document.getElementById('jobDetails').style.display = 'none';
-            }
-        }
-        
-        document.getElementById('allocationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const allocationData = {
-                employee_id: document.getElementById('employeeId').value,
-                machine_id: document.getElementById('machineId').value,
-                allocation_type: document.getElementById('allocationType').value,
-                start_date: document.getElementById('startDate').value,
-                end_date: document.getElementById('endDate').value || null,
-                notes: document.getElementById('allocationNotes').value
-            };
-            
-            try {
-                const response = await fetch('/api/manager-controls/employee-machine-allocations', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(allocationData)
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAlert('Employee allocated successfully', 'success');
-                    hideModal('addAllocationModal');
-                    document.getElementById('allocationForm').reset();
-                    loadAllocations();
-                } else {
-                    showAlert(data.message || 'Failed to allocate employee', 'danger');
-                }
-            } catch (error) {
-                console.error('Error allocating employee:', error);
-                showAlert('Failed to allocate employee', 'danger');
-            }
-        });
-        
-        async function editAllocation(id) {
-            try {
-                const response = await fetch('/api/manager-controls/employee-machine-allocations', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    const allocation = data.data.find(a => a.id === id);
-                    if (allocation) {
-                        document.getElementById('editAllocationId').value = allocation.id;
-                        document.getElementById('editAllocationType').value = allocation.allocation_type;
-                        document.getElementById('editStartDate').value = allocation.start_date;
-                        document.getElementById('editEndDate').value = allocation.end_date || '';
-                        document.getElementById('editIsActive').value = allocation.is_active ? 'true' : 'false';
-                        document.getElementById('editAllocationNotes').value = allocation.notes || '';
-                        
-                        showModal('editAllocationModal');
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading allocation:', error);
-                showAlert('Failed to load allocation', 'danger');
-            }
-        }
-        
-        document.getElementById('editAllocationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const allocationId = document.getElementById('editAllocationId').value;
-            const allocationData = {
-                allocation_type: document.getElementById('editAllocationType').value,
-                start_date: document.getElementById('editStartDate').value,
-                end_date: document.getElementById('editEndDate').value || null,
-                is_active: document.getElementById('editIsActive').value === 'true',
-                notes: document.getElementById('editAllocationNotes').value
-            };
-            
-            try {
-                const response = await fetch(`/api/manager-controls/employee-machine-allocations/${allocationId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(allocationData)
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAlert('Allocation updated successfully', 'success');
-                    hideModal('editAllocationModal');
-                    loadAllocations();
-                } else {
-                    showAlert(data.message || 'Failed to update allocation', 'danger');
-                }
-            } catch (error) {
-                console.error('Error updating allocation:', error);
-                showAlert('Failed to update allocation', 'danger');
-            }
-        });
-        
-        async function toggleAllocation(id, currentStatus) {
-            try {
-                const response = await fetch(`/api/manager-controls/employee-machine-allocations/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify({ is_active: !currentStatus })
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAlert(`Allocation ${!currentStatus ? 'activated' : 'deactivated'} successfully`, 'success');
-                    loadAllocations();
-                } else {
-                    showAlert(data.message || 'Failed to update allocation', 'danger');
-                }
-            } catch (error) {
-                console.error('Error toggling allocation:', error);
-                showAlert('Failed to update allocation', 'danger');
-            }
-        }
-        
-        function reassignJob(jobId) {
-            const job = departmentJobs.find(j => j.id === jobId);
-            if (job) {
-                document.getElementById('jobSelect').value = jobId;
-                loadJobDetails();
-                showModal('assignJobModal');
-            }
-        }
-        
-        document.getElementById('assignJobForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const jobId = document.getElementById('jobSelect').value;
-            const assignData = {
-                assigned_employee_id: document.getElementById('assignEmployee').value,
-                machine_id: document.getElementById('assignMachine').value,
-                scheduled_date: document.getElementById('scheduledDate').value
-            };
-            
-            try {
-                const response = await fetch(`/api/manager-controls/assign-job/${jobId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(assignData)
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAlert('Job assigned successfully', 'success');
-                    hideModal('assignJobModal');
-                    document.getElementById('assignJobForm').reset();
-                    loadDepartmentJobs();
-                } else {
-                    showAlert(data.message || 'Failed to assign job', 'danger');
-                }
-            } catch (error) {
-                console.error('Error assigning job:', error);
-                showAlert('Failed to assign job', 'danger');
-            }
-        });
-        
-        loadDepartmentData();
-    </script>
+    <script type="module" src="/static/js/modules/manager-dashboard.js"></script>
 </body>
 </html>

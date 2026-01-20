@@ -102,7 +102,43 @@ const API = {
         create: (data) => apiRequest('/api/orders', 'POST', data),
         update: (id, data) => apiRequest(`/api/orders/${id}`, 'PUT', data),
         schedule: (id, data) => apiRequest(`/api/orders/${id}/schedule`, 'POST', data),
-        hold: (id, reason) => apiRequest(`/api/orders/${id}/hold`, 'POST', { hold_reason: reason })
+        hold: (id, reason) => apiRequest(`/api/orders/${id}/hold`, 'POST', { hold_reason: reason }),
+        getSuggestions: (id) => apiRequest(`/api/orders/${id}/suggestions`),
+        suggestAlternatives: (data) => apiRequest('/api/orders/suggest-alternatives', 'POST', data),
+        
+        getItems: (orderId) => apiRequest(`/api/orders/${orderId}/items`),
+        addItem: (orderId, data) => apiRequest(`/api/orders/${orderId}/items`, 'POST', data),
+        updateItem: (orderId, itemId, data) => apiRequest(`/api/orders/${orderId}/items/${itemId}`, 'PUT', data),
+        deleteItem: (orderId, itemId) => apiRequest(`/api/orders/${orderId}/items/${itemId}`, 'DELETE'),
+        
+        getProductionPath: (orderId) => apiRequest(`/api/orders/${orderId}/production-path`),
+        setProductionPath: (orderId, data) => apiRequest(`/api/orders/${orderId}/production-path`, 'POST', data),
+        updatePathStep: (orderId, pathId, data) => apiRequest(`/api/orders/${orderId}/production-path/${pathId}`, 'PUT', data),
+        deletePathStep: (orderId, pathId) => apiRequest(`/api/orders/${orderId}/production-path/${pathId}`, 'DELETE'),
+        
+        importPreview: (file) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            return fetch(`${API_BASE_URL}/api/orders/import/preview`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+            }).then(r => r.json());
+        },
+        import: (file, mapping) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('mapping', JSON.stringify(mapping));
+            return fetch(`${API_BASE_URL}/api/orders/import`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+            }).then(r => r.json());
+        }
     },
     
     defects: {
@@ -130,7 +166,9 @@ const API = {
         createTicket: (data) => apiRequest('/api/sop/tickets', 'POST', data),
         reassignTicket: (id, data) => apiRequest(`/api/sop/tickets/${id}/reassign`, 'POST', data),
         rejectTicket: (id, reason) => apiRequest(`/api/sop/tickets/${id}/reject`, 'POST', { reason }),
-        createNCR: (id, data) => apiRequest(`/api/sop/tickets/${id}/ncr`, 'POST', data)
+        createNCR: (id, data) => apiRequest(`/api/sop/tickets/${id}/ncr`, 'POST', data),
+        hodDecision: (id, data) => apiRequest(`/api/sop/tickets/${id}/hod-decision`, 'POST', data),
+        getEscalatedTickets: () => apiRequest('/api/sop/tickets/escalated')
     },
     
     maintenance: {
@@ -142,7 +180,17 @@ const API = {
         createTicket: (data) => apiRequest('/api/maintenance/tickets', 'POST', data),
         assignTicket: (id, data) => apiRequest(`/api/maintenance/tickets/${id}/assign`, 'POST', data),
         updateStatus: (id, data) => apiRequest(`/api/maintenance/tickets/${id}/status`, 'PATCH', data),
-        getMachineHistory: (machineId) => apiRequest(`/api/maintenance/machine-history/${machineId}`)
+        getMachineHistory: (machineId) => apiRequest(`/api/maintenance/machine-history/${machineId}`),
+        
+        getPreventiveSchedules: (params = {}) => {
+            const queryString = new URLSearchParams(params).toString();
+            return apiRequest(`/api/maintenance/preventive${queryString ? '?' + queryString : ''}`);
+        },
+        createPreventiveSchedule: (data) => apiRequest('/api/maintenance/preventive', 'POST', data),
+        updatePreventiveSchedule: (id, data) => apiRequest(`/api/maintenance/preventive/${id}`, 'PUT', data),
+        deletePreventiveSchedule: (id) => apiRequest(`/api/maintenance/preventive/${id}`, 'DELETE'),
+        logPreventiveMaintenance: (scheduleId, data) => apiRequest(`/api/maintenance/preventive/${scheduleId}/log`, 'POST', data),
+        getPreventiveLogs: (scheduleId) => apiRequest(`/api/maintenance/preventive/${scheduleId}/logs`)
     },
     
     finance: {
@@ -196,6 +244,7 @@ const API = {
         getScheduledById: (id) => apiRequest(`/api/reports/scheduled/${id}`),
         createScheduled: (data) => apiRequest('/api/reports/scheduled', 'POST', data),
         updateScheduled: (id, data) => apiRequest(`/api/reports/scheduled/${id}`, 'PUT', data),
+        deleteScheduled: (id) => apiRequest(`/api/reports/scheduled/${id}`, 'DELETE'),
         runScheduled: (id) => apiRequest(`/api/reports/scheduled/${id}/run`, 'POST'),
         defectsSummary: (params = {}) => {
             const queryString = new URLSearchParams(params).toString();
@@ -212,6 +261,62 @@ const API = {
         sopSummary: (params = {}) => {
             const queryString = new URLSearchParams(params).toString();
             return apiRequest(`/api/reports/sop/summary${queryString ? '?' + queryString : ''}`);
+        },
+        capacityAnalysis: (params = {}) => {
+            const queryString = new URLSearchParams(params).toString();
+            return apiRequest(`/api/reports/capacity/analysis${queryString ? '?' + queryString : ''}`);
+        },
+        costAnalysis: (params = {}) => {
+            const queryString = new URLSearchParams(params).toString();
+            return apiRequest(`/api/reports/cost/analysis${queryString ? '?' + queryString : ''}`);
+        },
+        quantityVariance: (params = {}) => {
+            const queryString = new URLSearchParams(params).toString();
+            return apiRequest(`/api/reports/quantity/variance${queryString ? '?' + queryString : ''}`);
         }
+    },
+    
+    workflows: {
+        getAll: (params = {}) => {
+            const queryString = new URLSearchParams(params).toString();
+            return apiRequest(`/api/workflows${queryString ? '?' + queryString : ''}`);
+        },
+        getById: (id) => apiRequest(`/api/workflows/${id}`),
+        getByCode: (code) => apiRequest(`/api/workflows/by-code/${code}`),
+        create: (data) => apiRequest('/api/workflows', 'POST', data),
+        update: (id, data) => apiRequest(`/api/workflows/${id}`, 'PUT', data),
+        activate: (id) => apiRequest(`/api/workflows/${id}/activate`, 'POST'),
+        deactivate: (id) => apiRequest(`/api/workflows/${id}/deactivate`, 'POST')
+    },
+    
+    sla: {
+        getAll: (params = {}) => {
+            const queryString = new URLSearchParams(params).toString();
+            return apiRequest(`/api/sla${queryString ? '?' + queryString : ''}`);
+        },
+        getById: (id) => apiRequest(`/api/sla/${id}`),
+        create: (data) => apiRequest('/api/sla', 'POST', data),
+        update: (id, data) => apiRequest(`/api/sla/${id}`, 'PUT', data),
+        delete: (id) => apiRequest(`/api/sla/${id}`, 'DELETE'),
+        getTracking: (entityType, entityId) => apiRequest(`/api/sla/tracking/${entityType}/${entityId}`)
+    },
+    
+    roles: {
+        getAll: () => apiRequest('/api/roles'),
+        getById: (id) => apiRequest(`/api/roles/${id}`),
+        create: (data) => apiRequest('/api/roles', 'POST', data),
+        update: (id, data) => apiRequest(`/api/roles/${id}`, 'PUT', data),
+        delete: (id) => apiRequest(`/api/roles/${id}`, 'DELETE')
+    },
+    
+    fieldPermissions: {
+        getAll: (params = {}) => {
+            const queryString = new URLSearchParams(params).toString();
+            return apiRequest(`/api/field-permissions${queryString ? '?' + queryString : ''}`);
+        },
+        getByRole: (roleId) => apiRequest(`/api/field-permissions/role/${roleId}`),
+        create: (data) => apiRequest('/api/field-permissions', 'POST', data),
+        update: (id, data) => apiRequest(`/api/field-permissions/${id}`, 'PUT', data),
+        delete: (id) => apiRequest(`/api/field-permissions/${id}`, 'DELETE')
     }
 };

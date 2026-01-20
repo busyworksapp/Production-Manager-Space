@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capacity Planning - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link active">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge hidden-badge">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary logout-btn" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="page-header-flex">
+            <h1>Capacity Planning Dashboard</h1>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-secondary" id="refreshBtn">Refresh</button>
+                <button class="btn btn-sm btn-primary" id="validateCapacityBtn">Validate Schedule</button>
+            </div>
+        </div>
+
+        <div class="card card-margin-bottom-lg">
+            <h3>Date Range</h3>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label" for="startDate">Start Date</label>
+                    <input type="date" id="startDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="endDate">End Date</label>
+                    <input type="date" id="endDate" class="form-input">
+                </div>
+                <div class="form-group form-group-align-end">
+                    <button class="btn btn-primary btn-full-width" id="loadCapacityBtn">Load Capacity</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="capacityOverview" class="grid grid-4 capacity-overview-grid">
+        </div>
+
+        <div class="card">
+            <h3>Department Capacity Details</h3>
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Employees</th>
+                            <th>Machines</th>
+                            <th>Capacity Target</th>
+                            <th>Scheduled</th>
+                            <th>Available</th>
+                            <th>Utilization</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="capacityTable">
+                        <tr><td colspan="9" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card card-margin-top-lg">
+            <h3>Scheduled Jobs by Department</h3>
+            <div id="departmentJobsContainer">
+                <p class="empty-state-center">Select a department to view scheduled jobs</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="departmentDetailModal" class="modal">
+        <div class="modal-content modal-content-ultra-wide">
+            <div class="modal-header">
+                <span id="departmentDetailTitle">Department Capacity Details</span>
+            </div>
+            <div id="departmentDetailContent">
+                <div class="grid grid-3 card-margin-bottom-lg">
+                    <div class="stat-card">
+                        <div class="stat-label">Capacity Target</div>
+                        <div class="stat-value" id="detailCapacityTarget">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Scheduled Quantity</div>
+                        <div class="stat-value" id="detailScheduled">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Available Capacity</div>
+                        <div class="stat-value" id="detailAvailable">-</div>
+                    </div>
+                </div>
+                
+                <h4>Scheduled Jobs</h4>
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Order</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Machine</th>
+                                <th>Employee</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="departmentJobsTable">
+                            <tr><td colspan="8" class="table-center-text">No jobs scheduled</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="closeDepartmentDetailBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="updateCapacityModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Update Capacity Target</div>
+            <form id="updateCapacityForm">
+                <input type="hidden" id="updateDepartmentId">
+                <div class="form-group">
+                    <label class="form-label">Department</label>
+                    <input type="text" id="updateDepartmentName" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="newCapacityTarget">New Capacity Target*</label>
+                    <input type="number" id="newCapacityTarget" class="form-input" required min="1" step="1">
+                    <small class="empty-state-center">Target units that can be produced in the date range</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelUpdateCapacityBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Target</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="validateScheduleModal" class="modal">
+        <div class="modal-content validate-modal-wide">
+            <div class="modal-header">Validate Capacity</div>
+            <form id="validateScheduleForm">
+                <div class="form-group">
+                    <label class="form-label" for="validateDepartment">Department*</label>
+                    <select id="validateDepartment" class="form-select" required>
+                        <option value="">Select Department</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="validateDate">Scheduled Date*</label>
+                    <input type="date" id="validateDate" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="validateQuantity">Quantity*</label>
+                    <input type="number" id="validateQuantity" class="form-input" required min="1">
+                </div>
+                <div id="validationResults" class="validation-results-hidden">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelValidateBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Validate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/capacity.js"></script>
+</body>
+</html>

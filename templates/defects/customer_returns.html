@@ -19,26 +19,26 @@
             </nav>
             <div class="user-menu">
                 <div class="notification-badge">
-                    <span class="badge" style="display: none;">0</span>
+                    <span class="badge hidden-badge">0</span>
                     <span>🔔</span>
                 </div>
                 <span id="username"></span>
-                <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+                <button class="btn btn-sm btn-secondary logout-btn">Logout</button>
             </div>
         </div>
     </div>
     
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div class="page-header-flex">
             <h1>Customer Returns</h1>
-            <button class="btn btn-primary" onclick="showModal('addReturnModal')">Record Return</button>
+            <button class="btn btn-primary add-return-btn">Record Return</button>
         </div>
 
-        <div class="card" style="margin-bottom: 1rem;">
+        <div class="card card-margin-bottom">
             <div class="grid grid-4">
                 <div class="form-group">
                     <label class="form-label" for="filterReturnType">Return Type</label>
-                    <select id="filterReturnType" class="form-select" onchange="filterReturns()">
+                    <select id="filterReturnType" class="form-select">
                         <option value="">All Types</option>
                         <option value="defect">Defect</option>
                         <option value="wrong_item">Wrong Item</option>
@@ -48,15 +48,15 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="startDate">From Date</label>
-                    <input type="date" id="startDate" class="form-input" onchange="filterReturns()">
+                    <input type="date" id="startDate" class="form-input">
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="endDate">To Date</label>
-                    <input type="date" id="endDate" class="form-input" onchange="filterReturns()">
+                    <input type="date" id="endDate" class="form-input">
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="searchReturn">Search</label>
-                    <input type="text" id="searchReturn" class="form-input" placeholder="Order or return number..." oninput="filterReturns()">
+                    <input type="text" id="searchReturn" class="form-input" placeholder="Order or return number...">
                 </div>
             </div>
         </div>
@@ -95,7 +95,7 @@
                 <div class="grid grid-2">
                     <div class="form-group">
                         <label class="form-label" for="orderId">Order*</label>
-                        <select id="orderId" class="form-select" required onchange="loadOrderProducts()"></select>
+                        <select id="orderId" class="form-select" required></select>
                     </div>
                     
                     <div class="form-group">
@@ -143,7 +143,7 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="hideModal('addReturnModal')">Cancel</button>
+                    <button type="button" class="btn btn-secondary close-add-return-modal-btn">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Return</button>
                 </div>
             </form>
@@ -155,7 +155,7 @@
             <div class="modal-header">Return Details</div>
             <div id="returnDetails"></div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="hideModal('viewReturnModal')">Close</button>
+                <button type="button" class="btn btn-secondary close-view-return-modal-btn">Close</button>
             </div>
         </div>
     </div>

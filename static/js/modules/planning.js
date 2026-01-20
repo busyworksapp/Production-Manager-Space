@@ -61,20 +61,24 @@ function renderCapacityOverview(departments) {
     const container = document.getElementById('capacityOverview');
     if (!container) return;
 
-    container.innerHTML = departments.map(dept => `
-        <div class="card" style="padding: 1rem; margin: 0;">
-            <strong>${escapeHtml(dept.name)}</strong>
-            <div style="margin-top: 0.5rem;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+    container.innerHTML = departments.map(dept => {
+        const percentage = dept.capacity_percentage || 0;
+        const barClass = percentage >= 100 ? 'capacity-bar-danger' : percentage >= 80 ? 'capacity-bar-warning' : 'capacity-bar-success';
+        return `
+        <div class="card capacity-card">
+            <div class="capacity-card-title">${escapeHtml(dept.name)}</div>
+            <div class="capacity-stats">
+                <div class="capacity-stat-row">
                     <span>Capacity Used:</span>
-                    <span>${dept.capacity_percentage || 0}%</span>
+                    <span>${percentage}%</span>
                 </div>
-                <div style="background: var(--color-bg-main); height: 8px; border-radius: 4px; margin-top: 0.25rem;">
-                    <div style="background: ${dept.capacity_percentage >= 100 ? 'var(--color-danger)' : dept.capacity_percentage >= 80 ? 'var(--color-warning)' : 'var(--color-success)'}; height: 100%; width: ${Math.min(100, dept.capacity_percentage || 0)}%; border-radius: 4px;"></div>
+                <div class="capacity-bar-bg">
+                    <div class="capacity-bar-fill ${barClass}" style="width: ${Math.min(100, percentage)}%;"></div>
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function renderSchedule(schedules) {
@@ -82,7 +86,7 @@ function renderSchedule(schedules) {
     if (!tbody) return;
 
     if (schedules.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">No schedules found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="schedule-table-center">No schedules found</td></tr>';
         return;
     }
 
@@ -99,11 +103,25 @@ function renderSchedule(schedules) {
             <td>${schedule.scheduled_quantity || 0}</td>
             <td><span class="badge badge-${getStatusColor(schedule.status)}">${schedule.status || 'scheduled'}</span></td>
             <td>
-                <button class="btn btn-sm btn-secondary" onclick="editSchedule(${schedule.id})">Edit</button>
-                ${schedule.status === 'on_hold' ? `<button class="btn btn-sm btn-warning" onclick="suggestAlternatives(${schedule.id})">Suggest</button>` : ''}
+                <button class="btn btn-sm btn-secondary edit-schedule-btn" data-schedule-id="${schedule.id}">Edit</button>
+                ${schedule.status === 'on_hold' ? `<button class="btn btn-sm btn-warning suggest-alternatives-btn" data-schedule-id="${schedule.id}">Suggest</button>` : ''}
             </td>
         </tr>
     `).join('');
+    
+    tbody.querySelectorAll('.edit-schedule-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const scheduleId = parseInt(e.target.getAttribute('data-schedule-id'));
+            editSchedule(scheduleId);
+        });
+    });
+    
+    tbody.querySelectorAll('.suggest-alternatives-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const scheduleId = parseInt(e.target.getAttribute('data-schedule-id'));
+            suggestAlternatives(scheduleId);
+        });
+    });
 }
 
 async function loadUnscheduledOrders() {
@@ -231,9 +249,6 @@ function showMachineAvailabilityLegend() {
     if (!legend) {
         legend = document.createElement('small');
         legend.className = 'availability-legend';
-        legend.style.color = 'var(--color-text-secondary)';
-        legend.style.display = 'block';
-        legend.style.marginTop = '0.25rem';
         legend.innerHTML = `
             <strong>Availability:</strong> 
             ✓ Available | ⚠ Limited | ⚠⚠ Busy | 🔧 Maintenance | ✗ Unavailable
@@ -271,13 +286,18 @@ async function validateCapacity() {
                 validationDiv.className = `alert alert-${result.severity}`;
                 validationDiv.innerHTML = `
                     ${result.warning} 
-                    <button class="btn btn-sm btn-primary" style="margin-left: 1rem;" onclick="showCapacityAlternatives()">
+                    <button class="btn btn-sm btn-primary capacity-alternatives-btn">
                         View Alternatives
                     </button>
                 `;
-                validationDiv.style.display = 'block';
+                validationDiv.classList.remove('capacity-validation-hidden');
+                
+                const altBtn = validationDiv.querySelector('.capacity-alternatives-btn');
+                if (altBtn) {
+                    altBtn.addEventListener('click', showCapacityAlternatives);
+                }
             } else {
-                validationDiv.style.display = 'none';
+                validationDiv.classList.add('capacity-validation-hidden');
             }
         }
     } catch (error) {

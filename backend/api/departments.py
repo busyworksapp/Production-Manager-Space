@@ -141,6 +141,19 @@ def delete_department(id):
     
     return success_response(message='Department deleted successfully')
 
+@departments_bp.route('/stages', methods=['GET'])
+@token_required
+def get_all_stages():
+    query = """
+        SELECT ps.*, d.name as department_name, d.code as department_code
+        FROM production_stages ps
+        LEFT JOIN departments d ON ps.department_id = d.id
+        WHERE ps.is_active = TRUE
+        ORDER BY d.name, ps.stage_order
+    """
+    stages = execute_query(query, fetch_all=True)
+    return success_response(stages)
+
 @departments_bp.route('/<int:id>/stages', methods=['POST'])
 @token_required
 @permission_required('admin', 'write')
