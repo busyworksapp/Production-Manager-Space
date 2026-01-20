@@ -141,6 +141,51 @@ def _get_pool():
             _db_pool = None
     return _db_pool
 
+
+class LazyPoolWrapper:
+    """Wrapper that proxies to the lazy-loaded connection pool"""
+    
+    def get_connection(self, timeout=5):
+        pool = _get_pool()
+        if pool is None:
+            raise RuntimeError(
+                "Database pool not available. Check database configuration."
+            )
+        return pool.get_connection(timeout=timeout)
+    
+    def return_connection(self, connection):
+        pool = _get_pool()
+        if pool is not None:
+            pool.return_connection(connection)
+    
+    def get_cursor(self, commit=False):
+        pool = _get_pool()
+        if pool is None:
+            raise RuntimeError(
+                "Database pool not available. Check database configuration."
+            )
+        return pool.get_cursor(commit=commit)
+    
+    def close_all(self):
+        pool = _get_pool()
+        if pool is not None:
+            pool.close_all()
+    
+    @property
+    def _connection_count(self):
+        pool = _get_pool()
+        return pool._connection_count if pool is not None else 0
+    
+    @property
+    def max_connections(self):
+        pool = _get_pool()
+        return pool.max_connections if pool is not None else 0
+
+
+# Create singleton instance for export
+db_pool = LazyPoolWrapper()
+
+
 def get_db_connection():
     pool = _get_pool()
     if pool is None:
@@ -149,10 +194,12 @@ def get_db_connection():
         )
     return pool.get_connection()
 
+
 def return_db_connection(connection):
     pool = _get_pool()
     if pool is not None:
         pool.return_connection(connection)
+
 
 @contextmanager
 def get_db_cursor(commit=False):
@@ -163,6 +210,7 @@ def get_db_cursor(commit=False):
         )
     with pool.get_cursor(commit=commit) as cursor:
         yield cursor
+
 
 def execute_query(query, params=None, fetch_one=False, fetch_all=False, commit=False):
     try:
@@ -191,6 +239,7 @@ def execute_query(query, params=None, fetch_one=False, fetch_all=False, commit=F
     except Exception as e:
         db_logger.error(f"Unexpected error during query execution: {str(e)}")
         raise
+
 
 def execute_many(query, params_list, commit=True):
     try:
