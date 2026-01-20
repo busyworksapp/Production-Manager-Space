@@ -38,6 +38,16 @@
             </div>
         </div>
         
+        <div id="exceptionAlert" class="alert alert-warning" style="display: none; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>⚠️ Production Exceptions Detected</strong>
+                    <p id="exceptionSummary" style="margin: 8px 0 0 0;"></p>
+                </div>
+                <button class="btn btn-sm btn-primary" id="viewExceptionsBtn">View Details</button>
+            </div>
+        </div>
+        
         <div class="card card-margin-bottom">
             <div class="filter-group">
                 <select id="statusFilter" class="form-select filter-select">
@@ -254,6 +264,54 @@
             
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary close-modal-btn" data-modal="productionPathModal">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="exceptionDetailsModal" class="modal">
+        <div class="modal-content modal-content-ultra-wide">
+            <div class="modal-header">
+                <span>Production Exceptions - Orders On Hold</span>
+            </div>
+            
+            <div class="grid grid-3 card-margin-bottom-lg">
+                <div class="stat-card stat-card-danger">
+                    <div class="stat-label">Orders On Hold</div>
+                    <div class="stat-value" id="exceptionCount">0</div>
+                </div>
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-label">Order Value At Risk</div>
+                    <div class="stat-value" id="exceptionValue">R 0.00</div>
+                </div>
+                <div class="stat-card stat-card-danger">
+                    <div class="stat-label">Total Cost Impact</div>
+                    <div class="stat-value" id="exceptionCost">R 0.00</div>
+                </div>
+            </div>
+            
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order Number</th>
+                            <th>Customer</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Hold Reason</th>
+                            <th>Defect Ticket</th>
+                            <th>Department</th>
+                            <th>Cost Impact</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exceptionOrdersTable">
+                        <tr><td colspan="9" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn" data-modal="exceptionDetailsModal">Close</button>
             </div>
         </div>
     </div>

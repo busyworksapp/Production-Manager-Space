@@ -52,15 +52,17 @@
                         <th>Ticket #</th>
                         <th>Order</th>
                         <th>Customer</th>
+                        <th>Product</th>
                         <th>Department</th>
                         <th>Quantity</th>
+                        <th>Cost Impact</th>
                         <th>Rejection Type</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="ticketsTable">
-                    <tr><td colspan="8" class="loading">Loading...</td></tr>
+                    <tr><td colspan="10" class="loading">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -71,18 +73,36 @@
             <div class="modal-header">Create Replacement Ticket</div>
             <form id="ticketForm">
                 <div class="form-group">
-                    <label class="form-label" for="orderNumber">Order Number*</label>
-                    <input type="text" id="orderNumber" class="form-input" required>
+                    <label class="form-label" for="orderId">Order*</label>
+                    <select id="orderId" class="form-select" required>
+                        <option value="">Select Order...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="orderItemGroup" style="display: none;">
+                    <label class="form-label" for="orderItemId">Item*</label>
+                    <select id="orderItemId" class="form-select">
+                        <option value="">Select Item...</option>
+                    </select>
+                    <small class="help-text">Select the specific item from this order that was rejected</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="departmentId">Department*</label>
+                    <select id="departmentId" class="form-select" required>
+                        <option value="">Select Department...</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="quantityRejected">Quantity Rejected*</label>
-                    <input type="number" id="quantityRejected" class="form-input" required>
+                    <input type="number" id="quantityRejected" class="form-input" required min="1">
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="rejectionType">Rejection Type*</label>
                     <select id="rejectionType" class="form-select" required>
+                        <option value="">Select Type...</option>
                         <option value="material">Material</option>
                         <option value="workmanship">Workmanship</option>
                         <option value="machine">Machine</option>
@@ -93,7 +113,12 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="rejectionReason">Rejection Reason*</label>
-                    <textarea id="rejectionReason" class="form-textarea" required></textarea>
+                    <textarea id="rejectionReason" class="form-textarea" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="notes">Additional Notes</label>
+                    <textarea id="notes" class="form-textarea" rows="2"></textarea>
                 </div>
                 
                 <div class="modal-footer">

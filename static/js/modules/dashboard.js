@@ -68,6 +68,18 @@ class DashboardPage {
                 `).join('');
                 document.getElementById('recentNotifications').innerHTML = notificationsHtml || 'No notifications';
             }
+            
+            const exceptionsResponse = await apiRequest('/api/orders/exceptions', 'GET');
+            if (exceptionsResponse.success && exceptionsResponse.data.total_on_hold > 0) {
+                const widget = document.getElementById('exceptionOrdersWidget');
+                const summary = document.getElementById('exceptionWidgetSummary');
+                
+                widget.style.display = 'block';
+                summary.innerHTML = `
+                    <strong>${exceptionsResponse.data.total_on_hold}</strong> orders on hold due to internal rejections or stock issues. 
+                    Order value at risk: <strong style="color: #e74c3c;">R ${exceptionsResponse.data.total_value_at_risk.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
+                `;
+            }
         } catch (error) {
             console.error('Error loading dashboard:', error);
             showAlert('Failed to load dashboard data', 'danger');

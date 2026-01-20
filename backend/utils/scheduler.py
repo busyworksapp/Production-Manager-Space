@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from backend.config.database import execute_query
 from backend.utils.notifications import create_notification
 import json
+import os
 
 try:
     from backend.utils.report_generator import execute_scheduled_report
@@ -150,8 +151,10 @@ class BackgroundScheduler:
     def process_escalations(self):
         open_sop_tickets = execute_query(
             """SELECT st.*, 
-                      TIMESTAMPDIFF(HOUR, st.created_at, NOW()) as hours_open
+                      TIMESTAMPDIFF(HOUR, st.created_at, NOW()) as hours_open,
+                      d.manager_id as dept_manager_id
                FROM sop_failure_tickets st
+               LEFT JOIN departments d ON st.charged_department_id = d.id
                WHERE st.status IN ('open', 'ncr_in_progress')
                AND st.escalated_to_hod = FALSE""",
             fetch_all=True
@@ -160,26 +163,56 @@ class BackgroundScheduler:
         for ticket in open_sop_tickets:
             if ticket['hours_open'] >= 48:
                 execute_query(
-                    "UPDATE sop_failure_tickets SET escalated_to_hod = TRUE WHERE id = %s",
+                    "UPDATE sop_failure_tickets SET escalated_to_hod = TRUE, status = 'escalated' WHERE id = %s",
                     (ticket['id'],),
                     commit=True
                 )
                 
-                department = execute_query(
-                    "SELECT manager_id FROM departments WHERE id = %s",
-                    (ticket['charged_department_id'],),
-                    fetch_one=True
+                hod_users = execute_query(
+                    """SELECT id, email, first_name, last_name 
+                       FROM users 
+                       WHERE role_id = (SELECT id FROM roles WHERE name = 'HOD')
+                       AND is_active = TRUE""",
+                    fetch_all=True
                 )
                 
-                if department and department['manager_id']:
+                for hod in hod_users:
                     create_notification(
-                        recipient_id=department['manager_id'],
+                        recipient_id=hod['id'],
                         notification_type='sop_escalation',
                         title=f"SOP Ticket Escalated: {ticket['ticket_number']}",
-                        message=f"SOP failure ticket has been open for {ticket['hours_open']} hours without resolution",
+                        message=f"SOP failure ticket has been open for {ticket['hours_open']} hours without resolution. Requires HOD review and decision.",
                         related_entity_type='sop_ticket',
                         related_entity_id=ticket['id'],
                         priority='urgent'
+                    )
+                    
+                    try:
+                        from backend.utils.email_sender import send_email
+                        email_body = f"""
+                        <h2>SOP Ticket Escalation - Urgent Action Required</h2>
+                        <p>Hello {hod['first_name']},</p>
+                        <p><strong>SOP Ticket:</strong> {ticket['ticket_number']}</p>
+                        <p><strong>Reference:</strong> {ticket['sop_reference']}</p>
+                        <p><strong>Time Open:</strong> {ticket['hours_open']} hours</p>
+                        <p><strong>Failure Description:</strong> {ticket['failure_description']}</p>
+                        <hr>
+                        <p style="color: red;"><strong>This ticket has exceeded the 48-hour SLA and requires HOD review and decision.</strong></p>
+                        <p><a href="{os.getenv('APP_URL', 'http://localhost:5000')}/sop/tickets/{ticket['id']}">View Ticket Details</a></p>
+                        """
+                        send_email([hod['email']], f"SOP Escalation: {ticket['ticket_number']}", email_body)
+                    except Exception as e:
+                        print(f"Failed to send escalation email: {str(e)}")
+                
+                if ticket['dept_manager_id']:
+                    create_notification(
+                        recipient_id=ticket['dept_manager_id'],
+                        notification_type='sop_escalation',
+                        title=f"Your SOP Ticket Escalated: {ticket['ticket_number']}",
+                        message=f"SOP failure ticket from your department has been escalated to HOD after {ticket['hours_open']} hours",
+                        related_entity_type='sop_ticket',
+                        related_entity_id=ticket['id'],
+                        priority='high'
                     )
     
     def check_preventive_maintenance(self):

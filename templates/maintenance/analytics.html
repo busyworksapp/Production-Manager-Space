@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Analytics - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link active">Maintenance</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge hidden-badge">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary logout-btn">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="page-header-flex">
+            <h1>Maintenance Analytics</h1>
+            <div class="btn-group">
+                <a href="/maintenance/tickets" class="btn btn-sm btn-secondary">Tickets</a>
+                <a href="/maintenance/preventive" class="btn btn-sm btn-secondary">Preventive Maintenance</a>
+            </div>
+        </div>
+
+        <div class="card card-margin-bottom-lg">
+            <h3>Date Range & Filters</h3>
+            <div class="grid grid-4">
+                <div class="form-group">
+                    <label class="form-label" for="startDate">Start Date</label>
+                    <input type="date" id="startDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="endDate">End Date</label>
+                    <input type="date" id="endDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="departmentFilter">Department</label>
+                    <select id="departmentFilter" class="form-select">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="form-group form-group-align-end">
+                    <button class="btn btn-primary btn-full-width" id="loadAnalyticsBtn">Load Analytics</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-4 card-margin-bottom-lg">
+            <div class="stat-card">
+                <div class="stat-label">Total Tickets</div>
+                <div class="stat-value" id="totalTickets">0</div>
+            </div>
+            <div class="stat-card stat-card-success">
+                <div class="stat-label">Completed</div>
+                <div class="stat-value" id="completedTickets">0</div>
+            </div>
+            <div class="stat-card stat-card-warning">
+                <div class="stat-label">Open Tickets</div>
+                <div class="stat-value" id="openTickets">0</div>
+            </div>
+            <div class="stat-card stat-card-danger">
+                <div class="stat-label">Total Downtime</div>
+                <div class="stat-value" id="totalDowntime">0 hrs</div>
+            </div>
+        </div>
+
+        <div class="grid grid-2 card-margin-bottom-lg">
+            <div class="stat-card">
+                <div class="stat-label">Avg Resolution Time</div>
+                <div class="stat-value" id="avgResolution">0 hrs</div>
+            </div>
+            <div class="stat-card stat-card-danger">
+                <div class="stat-label">Critical Tickets</div>
+                <div class="stat-value" id="criticalTickets">0</div>
+            </div>
+        </div>
+
+        <div class="grid grid-2 card-margin-bottom-lg">
+            <div class="card">
+                <h3>Top 10 Machines by Ticket Count</h3>
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Machine</th>
+                                <th>Tickets</th>
+                                <th>Downtime (hrs)</th>
+                                <th>MTBF (hrs)</th>
+                                <th>MTTR (min)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="machineBreakdownTable">
+                            <tr><td colspan="5" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Tickets by Severity</h3>
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Count</th>
+                                <th>Downtime (hrs)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="severityBreakdownTable">
+                            <tr><td colspan="3" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Monthly Trends</h3>
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Ticket Count</th>
+                            <th>Total Downtime (hrs)</th>
+                            <th>Avg Resolution Time (hrs)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyTrendsTable">
+                        <tr><td colspan="4" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/maintenance-analytics.js"></script>
+</body>
+</html>

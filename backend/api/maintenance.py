@@ -4,7 +4,7 @@ from backend.utils.auth import token_required, permission_required
 from backend.utils.response import success_response, error_response
 from backend.utils.audit import log_audit
 from backend.utils.notifications import create_notification
-from datetime import datetime
+from datetime import datetime, timedelta
 
 maintenance_bp = Blueprint('maintenance', __name__, url_prefix='/api/maintenance')
 
@@ -212,3 +212,113 @@ def get_machine_history(machine_id):
     
     history = execute_query(query, (machine_id,), fetch_all=True)
     return success_response(history)
+
+@maintenance_bp.route('/analytics', methods=['GET'])
+@token_required
+def get_maintenance_analytics():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    department_id = request.args.get('department_id')
+    machine_id = request.args.get('machine_id')
+    
+    if not start_date:
+        start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+    if not end_date:
+        end_date = datetime.now().strftime('%Y-%m-%d')
+    
+    where_clause = "WHERE mt.created_at BETWEEN %s AND %s"
+    params = [start_date, end_date]
+    
+    if department_id:
+        where_clause += " AND mt.department_id = %s"
+        params.append(department_id)
+    
+    if machine_id:
+        where_clause += " AND mt.machine_id = %s"
+        params.append(machine_id)
+    
+    ticket_stats_query = f"""
+        SELECT 
+            COUNT(*) as total_tickets,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tickets,
+            SUM(CASE WHEN status IN ('open', 'assigned', 'in_progress', 'awaiting_parts') THEN 1 ELSE 0 END) as open_tickets,
+            SUM(downtime_minutes) as total_downtime_minutes,
+            AVG(CASE WHEN status = 'completed' 
+                THEN TIMESTAMPDIFF(MINUTE, created_at, completed_at) END) as avg_resolution_time,
+            SUM(CASE WHEN severity = 'critical' THEN 1 ELSE 0 END) as critical_tickets,
+            SUM(CASE WHEN severity = 'high' THEN 1 ELSE 0 END) as high_priority_tickets
+        FROM maintenance_tickets mt
+        {where_clause}
+    """
+    
+    stats = execute_query(ticket_stats_query, tuple(params), fetch_one=True)
+    
+    machine_breakdown_query = f"""
+        SELECT 
+            m.id, m.machine_name, m.machine_number,
+            COUNT(mt.id) as ticket_count,
+            SUM(mt.downtime_minutes) as total_downtime,
+            AVG(CASE WHEN mt.status = 'completed' 
+                THEN TIMESTAMPDIFF(MINUTE, mt.created_at, mt.completed_at) END) as avg_repair_time
+        FROM machines m
+        LEFT JOIN maintenance_tickets mt ON m.id = mt.machine_id
+        {where_clause.replace('mt.created_at', 'mt.created_at')}
+        GROUP BY m.id, m.machine_name, m.machine_number
+        ORDER BY ticket_count DESC
+        LIMIT 10
+    """
+    
+    machine_breakdown = execute_query(machine_breakdown_query, tuple(params), fetch_all=True)
+    
+    severity_breakdown_query = f"""
+        SELECT 
+            severity,
+            COUNT(*) as count,
+            SUM(downtime_minutes) as total_downtime
+        FROM maintenance_tickets mt
+        {where_clause}
+        GROUP BY severity
+        ORDER BY count DESC
+    """
+    
+    severity_breakdown = execute_query(severity_breakdown_query, tuple(params), fetch_all=True)
+    
+    monthly_trends_query = f"""
+        SELECT 
+            DATE_FORMAT(created_at, '%Y-%m') as month,
+            COUNT(*) as ticket_count,
+            SUM(downtime_minutes) as total_downtime,
+            AVG(CASE WHEN status = 'completed' 
+                THEN TIMESTAMPDIFF(MINUTE, created_at, completed_at) END) as avg_resolution_time
+        FROM maintenance_tickets mt
+        {where_clause}
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+        ORDER BY month ASC
+    """
+    
+    monthly_trends = execute_query(monthly_trends_query, tuple(params), fetch_all=True)
+    
+    for machine in machine_breakdown:
+        machine['mtbf'] = 0
+        machine['mttr'] = machine.get('avg_repair_time') or 0
+        
+        if machine['ticket_count'] and machine['ticket_count'] > 0:
+            days_in_period = (datetime.strptime(end_date, '%Y-%m-%d') - datetime.strptime(start_date, '%Y-%m-%d')).days
+            if days_in_period > 0:
+                machine['mtbf'] = round(days_in_period * 24 / machine['ticket_count'], 2)
+    
+    return success_response({
+        'summary': {
+            'total_tickets': stats.get('total_tickets') or 0,
+            'completed_tickets': stats.get('completed_tickets') or 0,
+            'open_tickets': stats.get('open_tickets') or 0,
+            'total_downtime_hours': round((stats.get('total_downtime_minutes') or 0) / 60, 2),
+            'avg_resolution_time_hours': round((stats.get('avg_resolution_time') or 0) / 60, 2),
+            'critical_tickets': stats.get('critical_tickets') or 0,
+            'high_priority_tickets': stats.get('high_priority_tickets') or 0
+        },
+        'machine_breakdown': machine_breakdown,
+        'severity_breakdown': severity_breakdown,
+        'monthly_trends': monthly_trends,
+        'date_range': {'start_date': start_date, 'end_date': end_date}
+    })

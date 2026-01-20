@@ -398,3 +398,49 @@ def get_escalated_tickets():
     
     tickets = execute_query(query, fetch_all=True)
     return success_response(tickets)
+
+@sop_bp.route('/sla-dashboard', methods=['GET'])
+@token_required
+def get_sla_dashboard():
+    at_risk_tickets = execute_query(
+        """SELECT st.*, 
+                  TIMESTAMPDIFF(HOUR, st.created_at, NOW()) as hours_open,
+                  charging_dept.name as charging_department_name,
+                  charged_dept.name as charged_department_name,
+                  CONCAT(created.first_name, ' ', created.last_name) as created_by_name
+           FROM sop_failure_tickets st
+           LEFT JOIN departments charging_dept ON st.charging_department_id = charging_dept.id
+           LEFT JOIN departments charged_dept ON st.charged_department_id = charged_dept.id
+           LEFT JOIN users created ON st.created_by_id = created.id
+           WHERE st.status IN ('open', 'ncr_in_progress')
+           AND st.escalated_to_hod = FALSE
+           AND TIMESTAMPDIFF(HOUR, st.created_at, NOW()) >= 36
+           ORDER BY hours_open DESC""",
+        fetch_all=True
+    )
+    
+    escalated_tickets = execute_query(
+        """SELECT st.*, 
+                  TIMESTAMPDIFF(HOUR, st.created_at, NOW()) as hours_open,
+                  charging_dept.name as charging_department_name,
+                  charged_dept.name as charged_department_name,
+                  CONCAT(created.first_name, ' ', created.last_name) as created_by_name
+           FROM sop_failure_tickets st
+           LEFT JOIN departments charging_dept ON st.charging_department_id = charging_dept.id
+           LEFT JOIN departments charged_dept ON st.charged_department_id = charged_dept.id
+           LEFT JOIN users created ON st.created_by_id = created.id
+           WHERE st.escalated_to_hod = TRUE
+           AND st.status IN ('escalated', 'rejected')
+           ORDER BY st.created_at DESC
+           LIMIT 20""",
+        fetch_all=True
+    )
+    
+    summary = {
+        'at_risk_count': len(at_risk_tickets),
+        'escalated_count': len(escalated_tickets),
+        'at_risk_tickets': at_risk_tickets,
+        'escalated_tickets': escalated_tickets
+    }
+    
+    return success_response(summary)

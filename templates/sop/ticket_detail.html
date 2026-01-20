@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOP Ticket Details - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .workflow-timeline {
+            position: relative;
+            padding: 2rem 0;
+            margin: 2rem 0;
+        }
+        .timeline-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        .timeline-marker {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
+            margin-right: 1rem;
+            z-index: 1;
+        }
+        .timeline-marker.completed { background: #10b981; }
+        .timeline-marker.current { background: #3b82f6; }
+        .timeline-marker.pending { background: #94a3b8; }
+        .timeline-content {
+            flex: 1;
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #e2e8f0;
+        }
+        .timeline-content.completed { border-left-color: #10b981; }
+        .timeline-content.current { border-left-color: #3b82f6; }
+        .timeline-line {
+            position: absolute;
+            left: 19px;
+            top: 50px;
+            bottom: 50px;
+            width: 2px;
+            background: #e2e8f0;
+        }
+        .readonly-notice {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+        }
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 2rem;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/sop/tickets" class="nav-link active">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge hidden-badge">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary logout-btn">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="ticket-header">
+            <div>
+                <h1 id="ticketTitle">SOP Ticket Details</h1>
+                <p id="ticketNumber" style="color: #666; font-size: 1.1rem;"></p>
+            </div>
+            <div class="action-buttons" id="actionButtons"></div>
+        </div>
+
+        <div id="readonlyNotice" class="readonly-notice" style="display: none;">
+            <strong>⚠️ Read-Only Mode:</strong> This ticket is closed and cannot be modified.
+        </div>
+
+        <div id="escalationNotice" class="readonly-notice" style="display: none; background: #fee2e2; border-left-color: #dc2626;">
+            <strong>🔺 Escalated to HOD:</strong> This ticket has been escalated and requires HOD decision.
+        </div>
+        
+        <div class="card">
+            <div class="card-header">Ticket Information</div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">SOP Reference</label>
+                    <p id="sopReference" class="form-value"></p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <div id="ticketStatus"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Charging Department</label>
+                    <p id="chargingDept" class="form-value"></p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Charged Department</label>
+                    <p id="chargedDept" class="form-value"></p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Created By</label>
+                    <p id="createdBy" class="form-value"></p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Created At</label>
+                    <p id="createdAt" class="form-value"></p>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Failure Description</label>
+                <p id="failureDesc" class="form-value" style="white-space: pre-wrap;"></p>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Impact Description</label>
+                <p id="impactDesc" class="form-value" style="white-space: pre-wrap;"></p>
+            </div>
+
+            <div id="reassignmentInfo" style="display: none; margin-top: 1rem; padding: 1rem; background: #fef3c7; border-radius: 4px;">
+                <strong>Reassignment Information:</strong>
+                <p id="reassignmentReason" style="margin: 0.5rem 0 0 0;"></p>
+            </div>
+
+            <div id="rejectionInfo" style="display: none; margin-top: 1rem; padding: 1rem; background: #fee2e2; border-radius: 4px;">
+                <strong>Rejection Reason:</strong>
+                <p id="rejectionReason" style="margin: 0.5rem 0 0 0;"></p>
+            </div>
+        </div>
+
+        <div class="card" id="workflowCard">
+            <div class="card-header">Workflow Timeline</div>
+            <div class="workflow-timeline" id="workflowTimeline"></div>
+        </div>
+
+        <div class="card" id="ncrCard" style="display: none;">
+            <div class="card-header">Non-Conformance Report (NCR)</div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Completed By</label>
+                    <p id="ncrCompletedBy" class="form-value"></p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Completion Date</label>
+                    <p id="ncrCompletionDate" class="form-value"></p>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Root Cause Analysis</label>
+                <p id="ncrRootCause" class="form-value" style="white-space: pre-wrap;"></p>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Corrective Actions</label>
+                <p id="ncrCorrectiveActions" class="form-value" style="white-space: pre-wrap;"></p>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Preventive Measures</label>
+                <p id="ncrPreventiveMeasures" class="form-value" style="white-space: pre-wrap;"></p>
+            </div>
+        </div>
+
+        <div class="card" id="hodDecisionCard" style="display: none;">
+            <div class="card-header">HOD Decision</div>
+            <form id="hodDecisionForm">
+                <div class="form-group">
+                    <label class="form-label required">Decision</label>
+                    <select id="hodDecision" class="form-select" required>
+                        <option value="">Select Decision...</option>
+                        <option value="assign">Assign to Department</option>
+                        <option value="close">Close Ticket</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="finalDeptGroup" style="display: none;">
+                    <label class="form-label required">Assign to Department</label>
+                    <select id="finalDepartmentId" class="form-select">
+                        <option value="">Select Department...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Decision Notes</label>
+                    <textarea id="hodDecisionNotes" class="form-textarea" rows="4" required></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Submit Decision</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="reassignModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Reassign SOP Ticket</div>
+            <div id="reassignWarning" class="alert alert-warning">
+                <strong>⚠️ Note:</strong> Tickets can only be reassigned once. After reassignment, this option will no longer be available.
+            </div>
+            <form id="reassignForm">
+                <div class="form-group">
+                    <label class="form-label required">New Department</label>
+                    <select id="newDepartmentId" class="form-select" required>
+                        <option value="">Select Department...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Reassignment Reason</label>
+                    <textarea id="reassignReason" class="form-textarea" rows="3" required></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeReassignModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Reassign Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="rejectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Reject SOP Ticket</div>
+            <p>Rejecting this ticket will escalate it to the HOD for final decision.</p>
+            <form id="rejectForm">
+                <div class="form-group">
+                    <label class="form-label required">Rejection Reason</label>
+                    <textarea id="rejectReason" class="form-textarea" rows="4" required></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeRejectModal()">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Reject & Escalate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="ncrModal" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">Complete NCR Report</div>
+            <form id="ncrForm">
+                <div class="form-group">
+                    <label class="form-label required">Root Cause Analysis</label>
+                    <textarea id="rootCauseAnalysis" class="form-textarea" rows="4" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Corrective Actions</label>
+                    <textarea id="correctiveActions" class="form-textarea" rows="4" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Preventive Measures</label>
+                    <textarea id="preventiveMeasures" class="form-textarea" rows="4" required></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeNcrModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success">Complete NCR & Close Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/sop-ticket-detail.js"></script>
+</body>
+</html>

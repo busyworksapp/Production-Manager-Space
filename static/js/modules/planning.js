@@ -434,21 +434,87 @@ async function suggestAlternatives(scheduleId) {
         const data = await response.json();
 
         if (data.success) {
+            const schedule = allSchedules.find(s => s.id === scheduleId);
             const listDiv = document.getElementById('alternativeOrdersList');
             if (listDiv) {
-                listDiv.innerHTML = data.data.map(order => `
-                    <div class="card" style="padding: 1rem; margin: 0.5rem 0;">
-                        <strong>${escapeHtml(order.order_number)}</strong> - ${escapeHtml(order.customer_name)}
-                        <p style="margin: 0.5rem 0;">${escapeHtml(order.product_name)} (Qty: ${order.quantity})</p>
-                        <button class="btn btn-sm btn-primary" onclick="scheduleAlternative(${order.id})">Schedule This</button>
-                    </div>
-                `).join('');
+                if (data.data.length === 0) {
+                    listDiv.innerHTML = '<p style="text-align: center; padding: 2rem; color: #666;">No suitable alternative orders found at this time.</p>';
+                } else {
+                    listDiv.innerHTML = data.data.map(order => {
+                        const compatibilityScore = order.compatibility_score || 0;
+                        const scoreColor = compatibilityScore >= 80 ? 'success' : compatibilityScore >= 60 ? 'warning' : 'secondary';
+                        return `
+                            <div class="card" style="padding: 1rem; margin: 0.5rem 0; border-left: 4px solid var(--color-${scoreColor});">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div style="flex: 1;">
+                                        <strong>${escapeHtml(order.order_number)}</strong> - ${escapeHtml(order.customer_name)}
+                                        <p style="margin: 0.5rem 0; color: #666;">${escapeHtml(order.product_name)} (Qty: ${order.quantity})</p>
+                                        ${order.reason ? `<p style="margin: 0.5rem 0; font-size: 0.9rem; color: #888;"><em>${escapeHtml(order.reason)}</em></p>` : ''}
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span class="badge badge-${scoreColor}" style="margin-bottom: 0.5rem;">Match: ${compatibilityScore}%</span>
+                                        <button class="btn btn-sm btn-primary" onclick="scheduleAlternative(${order.id}, ${scheduleId})">Schedule This</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
             }
             showModal('suggestAlternativeModal');
+        } else {
+            showNotification(data.error || 'Failed to load alternatives', 'error');
         }
     } catch (error) {
         console.error('Error loading alternatives:', error);
         showNotification('Failed to load alternative orders', 'error');
+    }
+}
+
+async function scheduleAlternative(orderId, originalScheduleId) {
+    try {
+        const originalSchedule = allSchedules.find(s => s.id === originalScheduleId);
+        if (!originalSchedule) {
+            showNotification('Original schedule not found', 'error');
+            return;
+        }
+
+        if (!confirm(`Schedule order #${orderId} to replace the on-hold job?`)) {
+            return;
+        }
+
+        const formData = {
+            order_id: orderId,
+            department_id: originalSchedule.department_id,
+            stage_id: originalSchedule.stage_id || null,
+            scheduled_date: originalSchedule.scheduled_date,
+            scheduled_quantity: originalSchedule.scheduled_quantity,
+            machine_id: originalSchedule.machine_id || null,
+            assigned_employee_id: originalSchedule.assigned_employee_id || null,
+            notes: `Scheduled as alternative for on-hold order #${originalSchedule.order_number}`
+        };
+
+        const response = await fetch('/api/orders/schedules', {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Alternative order scheduled successfully', 'success');
+            hideModal('suggestAlternativeModal');
+            await loadSchedule();
+        } else {
+            showNotification(data.error || 'Failed to schedule alternative', 'error');
+        }
+    } catch (error) {
+        console.error('Error scheduling alternative:', error);
+        showNotification('Failed to schedule alternative order', 'error');
     }
 }
 

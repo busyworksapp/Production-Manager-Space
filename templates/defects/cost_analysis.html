@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Defect Cost Analysis - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Planning</a>
+                <a href="/defects/replacement-tickets" class="nav-link active">Defects</a>
+                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
+                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge hidden-badge">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary logout-btn">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="page-header-flex">
+            <h1>Defect Cost Analysis</h1>
+            <div class="btn-group">
+                <a href="/defects/replacement-tickets" class="btn btn-sm btn-secondary">Replacement Tickets</a>
+                <a href="/defects/customer-returns" class="btn btn-sm btn-secondary">Customer Returns</a>
+            </div>
+        </div>
+
+        <div class="card card-margin-bottom-lg">
+            <h3>Date Range & Filters</h3>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label" for="startDate">Start Date</label>
+                    <input type="date" id="startDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="endDate">End Date</label>
+                    <input type="date" id="endDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="departmentFilter">Department</label>
+                    <select id="departmentFilter" class="form-select">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="loadAnalysisBtn">Load Analysis</button>
+        </div>
+
+        <div class="grid grid-4 card-margin-bottom-lg">
+            <div class="stat-card stat-card-danger">
+                <div class="stat-label">Total Defects</div>
+                <div class="stat-value" id="totalDefects">0</div>
+            </div>
+            <div class="stat-card stat-card-warning">
+                <div class="stat-label">Quantity Rejected</div>
+                <div class="stat-value" id="totalQuantity">0</div>
+            </div>
+            <div class="stat-card stat-card-danger">
+                <div class="stat-label">Material Cost</div>
+                <div class="stat-value" id="totalMaterialCost">R 0.00</div>
+            </div>
+            <div class="stat-card stat-card-danger">
+                <div class="stat-label">Total Cost Impact</div>
+                <div class="stat-value" id="totalCostImpact">R 0.00</div>
+            </div>
+        </div>
+
+        <div class="grid grid-2 card-margin-bottom-lg">
+            <div class="card">
+                <h3>Cost by Department</h3>
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Department</th>
+                                <th>Defects</th>
+                                <th>Qty Rejected</th>
+                                <th>Material Cost</th>
+                                <th>Total Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="departmentCostsTable">
+                            <tr><td colspan="5" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Top Defect Reasons by Cost</h3>
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Reason</th>
+                                <th>Count</th>
+                                <th>Quantity</th>
+                                <th>Total Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topDefectsTable">
+                            <tr><td colspan="4" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Monthly Cost Trends</h3>
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Defect Count</th>
+                            <th>Material Cost</th>
+                            <th>Total Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyTrendsTable">
+                        <tr><td colspan="4" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/modules/cost-analysis.js"></script>
+</body>
+</html>

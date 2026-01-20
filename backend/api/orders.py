@@ -765,3 +765,33 @@ def delete_production_path_step(id, path_id):
         return success_response(message='Production path step deleted successfully')
     except Exception as e:
         return error_response(str(e), 500)
+
+@orders_bp.route('/exceptions', methods=['GET'])
+@token_required
+@permission_required('planning', 'read')
+def get_exception_orders():
+    query = """
+        SELECT o.id, o.order_number, o.customer_name, o.status, o.hold_reason,
+               o.quantity, o.order_value, o.priority, o.created_at,
+               p.product_name,
+               rt.ticket_number, rt.quantity_rejected, rt.status as ticket_status,
+               rt.cost_impact, rt.rejection_reason, rt.created_at as defect_created_at,
+               d.name as department_name
+        FROM orders o
+        LEFT JOIN products p ON o.product_id = p.id
+        LEFT JOIN replacement_tickets rt ON o.id = rt.order_id
+        LEFT JOIN departments d ON rt.department_id = d.id
+        WHERE o.status = 'on_hold'
+        ORDER BY o.created_at DESC
+    """
+    
+    exception_orders = execute_query(query, fetch_all=True)
+    
+    summary = {
+        'total_on_hold': len(exception_orders),
+        'total_value_at_risk': sum(float(order.get('order_value') or 0) for order in exception_orders),
+        'total_cost_impact': sum(float(order.get('cost_impact') or 0) for order in exception_orders),
+        'orders': exception_orders
+    }
+    
+    return success_response(summary)

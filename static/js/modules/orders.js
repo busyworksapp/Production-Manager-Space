@@ -17,6 +17,7 @@ class OrdersPage {
         
         await Promise.all([this.loadProducts(), this.loadDepartments(), this.loadStages()]);
         this.loadOrders();
+        this.loadExceptionOrders();
         this.attachEventListeners();
     }
 
@@ -500,6 +501,59 @@ class OrdersPage {
         } catch (error) {
             showAlert(error.message || 'Failed to create order', 'danger');
         }
+    }
+
+    async loadExceptionOrders() {
+        try {
+            const response = await apiRequest('/api/orders/exceptions', 'GET');
+            
+            if (response.data && response.data.total_on_hold > 0) {
+                document.getElementById('exceptionAlert').style.display = 'block';
+                document.getElementById('exceptionSummary').innerHTML = `
+                    <strong>${response.data.total_on_hold}</strong> orders on hold | 
+                    Order Value at Risk: <strong>R ${response.data.total_value_at_risk.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong> | 
+                    Cost Impact: <strong>R ${response.data.total_cost_impact.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
+                `;
+                
+                document.getElementById('viewExceptionsBtn').addEventListener('click', () => {
+                    this.showExceptionDetails(response.data);
+                });
+            } else {
+                document.getElementById('exceptionAlert').style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Failed to load exception orders:', error);
+        }
+    }
+
+    showExceptionDetails(data) {
+        document.getElementById('exceptionCount').textContent = data.total_on_hold;
+        document.getElementById('exceptionValue').textContent = `R ${data.total_value_at_risk.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('exceptionCost').textContent = `R ${data.total_cost_impact.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        const tbody = document.getElementById('exceptionOrdersTable');
+        
+        if (!data.orders || data.orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state-center">No exception orders found</td></tr>';
+        } else {
+            tbody.innerHTML = data.orders.map(order => `
+                <tr>
+                    <td><strong>${order.order_number}</strong></td>
+                    <td>${order.customer_name}</td>
+                    <td>${order.product_name || 'N/A'}</td>
+                    <td>${order.quantity}</td>
+                    <td><span class="badge badge-danger">${order.hold_reason}</span></td>
+                    <td>${order.ticket_number ? `<a href="/defects/replacement-tickets" class="link">${order.ticket_number}</a>` : 'N/A'}</td>
+                    <td>${order.department_name || 'N/A'}</td>
+                    <td class="text-danger"><strong>R ${(order.cost_impact || 0).toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary view-order-btn" data-order-id="${order.id}">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        showModal('exceptionDetailsModal');
     }
 
     viewOrder(orderId) {

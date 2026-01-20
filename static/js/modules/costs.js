@@ -1,6 +1,8 @@
 let allLaborCosts = [];
 let allOverheadCosts = [];
 let allProductionCosts = [];
+let jobProfitabilityData = [];
+let departmentAnalysisData = [];
 
 async function loadLaborCosts() {
     try {
@@ -136,6 +138,119 @@ function renderProductionCosts(costs) {
     `).join('');
 }
 
+async function loadJobProfitability() {
+    const departmentId = document.getElementById('profitabilityDepartment')?.value;
+    const startDate = document.getElementById('profitabilityStartDate')?.value;
+    const endDate = document.getElementById('profitabilityEndDate')?.value;
+
+    const params = new URLSearchParams();
+    if (departmentId) params.append('department_id', departmentId);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+
+    try {
+        const response = await fetch(`/api/cost-models/job-profitability?${params.toString()}`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            jobProfitabilityData = data.data;
+            renderJobProfitability(data.data);
+        }
+    } catch (error) {
+        console.error('Error loading job profitability:', error);
+        showNotification('Failed to load job profitability data', 'error');
+    }
+}
+
+async function loadDepartmentAnalysis() {
+    const departmentId = document.getElementById('analysisDepartment')?.value;
+    const monthInput = document.getElementById('analysisMonth')?.value;
+
+    const params = new URLSearchParams();
+    if (departmentId) params.append('department_id', departmentId);
+    if (monthInput) params.append('month_year', monthInput);
+
+    try {
+        const response = await fetch(`/api/cost-models/department-analysis?${params.toString()}`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            departmentAnalysisData = data.data;
+            renderDepartmentAnalysis(data.data);
+        }
+    } catch (error) {
+        console.error('Error loading department analysis:', error);
+        showNotification('Failed to load department analysis data', 'error');
+    }
+}
+
+function renderJobProfitability(jobs) {
+    const tbody = document.getElementById('jobProfitabilityTable');
+    if (!tbody) return;
+
+    if (jobs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align: center;">No job profitability data found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = jobs.map(job => {
+        const variance = parseFloat(job.cost_variance || 0);
+        const varianceClass = variance > 0 ? 'text-danger' : variance < 0 ? 'text-success' : '';
+        const varianceSign = variance > 0 ? '+' : '';
+        
+        return `
+        <tr>
+            <td>${escapeHtml(job.order_number || '-')}</td>
+            <td>${escapeHtml(job.customer_name || '-')}</td>
+            <td>${escapeHtml(job.product_name || '-')}</td>
+            <td>${escapeHtml(job.department_name || '-')}</td>
+            <td>${parseInt(job.actual_quantity || 0)}</td>
+            <td>$${parseFloat(job.material_cost || 0).toFixed(2)}</td>
+            <td>$${parseFloat(job.labor_cost || 0).toFixed(2)}</td>
+            <td>$${parseFloat(job.overhead_cost || 0).toFixed(2)}</td>
+            <td><strong>$${parseFloat(job.total_cost || 0).toFixed(2)}</strong></td>
+            <td class="${varianceClass}"><strong>${varianceSign}$${Math.abs(variance).toFixed(2)}</strong></td>
+            <td>$${parseFloat(job.cost_per_unit || 0).toFixed(2)}</td>
+            <td>${parseFloat(job.productivity_rate || 0).toFixed(2)} u/h</td>
+        </tr>
+    `}).join('');
+}
+
+function renderDepartmentAnalysis(analysis) {
+    const tbody = document.getElementById('departmentAnalysisTable');
+    if (!tbody) return;
+
+    if (analysis.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">No department analysis data found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = analysis.map(dept => {
+        const variance = parseFloat(dept.total_cost_variance || 0);
+        const varianceClass = variance > 0 ? 'text-danger' : variance < 0 ? 'text-success' : '';
+        const varianceSign = variance > 0 ? '+' : '';
+        
+        return `
+        <tr>
+            <td>${escapeHtml(dept.department_name || '-')}</td>
+            <td>${dept.month_year || '-'}</td>
+            <td>${parseInt(dept.jobs_completed || 0)}</td>
+            <td>${parseInt(dept.total_units_produced || 0)}</td>
+            <td>$${parseFloat(dept.total_material_cost || 0).toFixed(2)}</td>
+            <td>$${parseFloat(dept.total_labor_cost || 0).toFixed(2)}</td>
+            <td>$${parseFloat(dept.total_overhead_cost || 0).toFixed(2)}</td>
+            <td><strong>$${parseFloat(dept.total_cost || 0).toFixed(2)}</strong></td>
+            <td class="${varianceClass}"><strong>${varianceSign}$${Math.abs(variance).toFixed(2)}</strong></td>
+            <td>$${parseFloat(dept.avg_cost_per_unit || 0).toFixed(2)}</td>
+            <td>${parseFloat(dept.total_hours_worked || 0).toFixed(1)} h</td>
+        </tr>
+    `}).join('');
+}
+
 async function loadDepartments() {
     try {
         const response = await fetch('/api/departments', {
@@ -144,11 +259,14 @@ async function loadDepartments() {
         const data = await response.json();
 
         if (data.success) {
-            const selects = ['departmentId', 'overheadDepartmentId'];
+            const selects = ['departmentId', 'overheadDepartmentId', 'profitabilityDepartment', 'analysisDepartment'];
             selects.forEach(selectId => {
                 const select = document.getElementById(selectId);
                 if (select) {
-                    select.innerHTML = '<option value="">Select Department</option>' +
+                    const defaultOption = selectId.includes('profitability') || selectId.includes('analysis') 
+                        ? '<option value="">All Departments</option>' 
+                        : '<option value="">Select Department</option>';
+                    select.innerHTML = defaultOption +
                         data.data.map(dept => `<option value="${dept.id}">${escapeHtml(dept.name)}</option>`).join('');
                 }
             });
@@ -235,5 +353,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDepartments();
     loadLaborCosts();
     loadOverheadCosts();
-    filterProductionCosts();
+    loadJobProfitability();
+    loadDepartmentAnalysis();
 });

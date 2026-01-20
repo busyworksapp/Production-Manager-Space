@@ -60,6 +60,17 @@ def webhook_receive():
         app_logger.error(f"Webhook processing error: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+# Alias for Twilio compatibility
+@whatsapp_bp.route('/twilio-webhook', methods=['GET'])
+def twilio_webhook_verify():
+    """Alias for webhook verification - Twilio uses different endpoint names"""
+    return webhook_verify()
+
+@whatsapp_bp.route('/twilio-webhook', methods=['POST'])
+def twilio_webhook_receive():
+    """Alias for webhook receive - Twilio uses different endpoint names"""
+    return webhook_receive()
+
 def process_incoming_message(message: dict):
     try:
         phone = message.get('from')

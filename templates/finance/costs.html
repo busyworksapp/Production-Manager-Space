@@ -84,36 +84,80 @@
         </div>
 
         <div class="card">
-            <div class="card-header">Production Cost Tracking</div>
+            <div class="card-header">Job Profitability Analysis</div>
             <div class="grid grid-3" style="margin-bottom: 1rem;">
                 <div class="form-group">
-                    <label class="form-label" for="filterOrder">Order Number</label>
-                    <input type="text" id="filterOrder" class="form-input" placeholder="Search order..." oninput="filterProductionCosts()">
+                    <label class="form-label" for="profitabilityDepartment">Department</label>
+                    <select id="profitabilityDepartment" class="form-select" onchange="loadJobProfitability()">
+                        <option value="">All Departments</option>
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="startDate">From Date</label>
-                    <input type="date" id="startDate" class="form-input" onchange="filterProductionCosts()">
+                    <label class="form-label" for="profitabilityStartDate">From Date</label>
+                    <input type="date" id="profitabilityStartDate" class="form-input" onchange="loadJobProfitability()">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="endDate">To Date</label>
-                    <input type="date" id="endDate" class="form-input" onchange="filterProductionCosts()">
+                    <label class="form-label" for="profitabilityEndDate">To Date</label>
+                    <input type="date" id="profitabilityEndDate" class="form-input" onchange="loadJobProfitability()">
                 </div>
             </div>
             
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Order Number</th>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Department</th>
+                        <th>Qty</th>
+                        <th>Material</th>
+                        <th>Labor</th>
+                        <th>Overhead</th>
+                        <th>Total Cost</th>
+                        <th>Variance</th>
+                        <th>Cost/Unit</th>
+                        <th>Productivity</th>
+                    </tr>
+                </thead>
+                <tbody id="jobProfitabilityTable">
+                    <tr><td colspan="12" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Department Cost Analysis</div>
+            <div class="grid grid-2" style="margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="analysisDepartment">Department</label>
+                    <select id="analysisDepartment" class="form-select" onchange="loadDepartmentAnalysis()">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="analysisMonth">Month</label>
+                    <input type="month" id="analysisMonth" class="form-input" onchange="loadDepartmentAnalysis()">
+                </div>
+            </div>
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Month</th>
+                        <th>Jobs</th>
+                        <th>Units</th>
                         <th>Material Cost</th>
                         <th>Labor Cost</th>
                         <th>Overhead Cost</th>
                         <th>Total Cost</th>
-                        <th>Calculated At</th>
-                        <th>Actions</th>
+                        <th>Variance</th>
+                        <th>Avg Cost/Unit</th>
+                        <th>Hours</th>
                     </tr>
                 </thead>
-                <tbody id="productionCostsTable">
-                    <tr><td colspan="7" class="loading">Loading...</td></tr>
+                <tbody id="departmentAnalysisTable">
+                    <tr><td colspan="11" class="loading">Loading...</td></tr>
                 </tbody>
             </table>
         </div>

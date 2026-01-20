@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Machine Availability Calendar - PMS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .calendar-container {
+            margin-top: 2rem;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .calendar-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 150px repeat(7, 1fr);
+            gap: 1px;
+            background: #e2e8f0;
+            border: 1px solid #e2e8f0;
+        }
+        .calendar-day-header {
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 600;
+        }
+        .calendar-machine-label {
+            background: #f8fafc;
+            padding: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            border-right: 2px solid #cbd5e1;
+        }
+        .calendar-cell {
+            background: white;
+            min-height: 80px;
+            padding: 0.5rem;
+            position: relative;
+        }
+        .calendar-cell.unavailable {
+            background: #fee2e2;
+        }
+        .calendar-cell.maintenance {
+            background: #fef3c7;
+        }
+        .calendar-event {
+            padding: 0.25rem 0.5rem;
+            margin-bottom: 0.25rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .calendar-event:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .calendar-event.pm {
+            background: #fbbf24;
+            color: #78350f;
+            border-left: 3px solid #f59e0b;
+        }
+        .calendar-event.mt {
+            background: #ef4444;
+            color: white;
+            border-left: 3px solid #dc2626;
+        }
+        .calendar-event.job {
+            background: #3b82f6;
+            color: white;
+            border-left: 3px solid #2563eb;
+        }
+        .legend {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+        }
+        .machine-status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+        .machine-status.available { background: #d1fae5; color: #065f46; }
+        .machine-status.maintenance { background: #fef3c7; color: #78350f; }
+        .machine-status.in-use { background: #dbeafe; color: #1e40af; }
+        .machine-status.broken { background: #fee2e2; color: #991b1b; }
+        .event-details-modal {
+            max-width: 600px;
+        }
+        .detail-row {
+            display: flex;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .detail-label {
+            font-weight: 600;
+            width: 150px;
+            color: #64748b;
+        }
+        .detail-value {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">PMS</div>
+            <nav class="nav">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/planning/orders" class="nav-link">Orders</a>
+                <a href="/planning/schedule" class="nav-link">Schedule</a>
+                <a href="/planning/machine-calendar" class="nav-link active">Machine Calendar</a>
+                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
+                <a href="/admin/departments" class="nav-link">Admin</a>
+            </nav>
+            <div class="user-menu">
+                <div class="notification-badge">
+                    <span class="badge hidden-badge">0</span>
+                    <span>🔔</span>
+                </div>
+                <span id="username"></span>
+                <button class="btn btn-sm btn-secondary logout-btn">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h1>Machine Availability Calendar</h1>
+        
+        <div class="card">
+            <div class="card-header">Filters</div>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label" for="departmentFilter">Department</label>
+                    <select id="departmentFilter" class="form-select">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="startDateFilter">Start Date</label>
+                    <input type="date" id="startDateFilter" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="endDateFilter">End Date</label>
+                    <input type="date" id="endDateFilter" class="form-input">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #fbbf24;"></div>
+                    <span>Preventive Maintenance</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>Maintenance Ticket</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    <span>Scheduled Job</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="calendar-header">
+                <h2>Machine Availability</h2>
+                <div class="calendar-nav">
+                    <button class="btn btn-sm btn-secondary" id="prevWeek">&larr; Previous Week</button>
+                    <span id="weekDisplay" style="font-weight: 600;"></span>
+                    <button class="btn btn-sm btn-secondary" id="nextWeek">Next Week &rarr;</button>
+                    <button class="btn btn-sm btn-primary" id="todayBtn">Today</button>
+                </div>
+            </div>
+            
+            <div class="calendar-container">
+                <div class="calendar-grid" id="calendarGrid">
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #666;">
+                        Loading calendar...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="eventDetailsModal" class="modal">
+        <div class="modal-content event-details-modal">
+            <div class="modal-header">
+                <h3 id="eventTitle">Event Details</h3>
+                <button class="modal-close" onclick="hideModal('eventDetailsModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="eventDetailsBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('eventDetailsModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/utils/auth.js"></script>
+    <script src="/static/js/utils/api.js"></script>
+    <script src="/static/js/utils/helpers.js"></script>
+    <script src="/static/js/modules/machine-calendar.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+        });
+    </script>
+</body>
+</html>

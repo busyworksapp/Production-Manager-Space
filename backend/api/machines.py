@@ -239,3 +239,104 @@ def get_machine_capacity(id):
         'maintenance_schedule': maintenance_schedule,
         'capacity_percentage': min(100, len(scheduled_jobs) * 10)
     })
+
+@machines_bp.route('/calendar', methods=['GET'])
+@token_required
+def get_machine_calendar():
+    """Get machine availability calendar data including preventive maintenance and downtime"""
+    department_id = request.args.get('department_id')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    if not start_date or not end_date:
+        return error_response('start_date and end_date are required', 400)
+    
+    machines_query = """
+        SELECT m.id, m.machine_name, m.machine_number, m.status, m.department_id,
+               d.name as department_name
+        FROM machines m
+        LEFT JOIN departments d ON m.department_id = d.id
+        WHERE m.is_active = TRUE
+    """
+    
+    params = []
+    if department_id:
+        machines_query += " AND m.department_id = %s"
+        params.append(department_id)
+    
+    machines_query += " ORDER BY m.machine_name"
+    machines = execute_query(machines_query, tuple(params) if params else None, fetch_all=True)
+    
+    preventive_maintenance_query = """
+        SELECT pms.*, m.machine_name, m.machine_number, m.department_id,
+               CONCAT(e.first_name, ' ', e.last_name) as technician_name
+        FROM preventive_maintenance_schedules pms
+        LEFT JOIN machines m ON pms.machine_id = m.id
+        LEFT JOIN employees e ON pms.assigned_technician_id = e.id
+        WHERE pms.is_active = TRUE
+        AND pms.next_due_at BETWEEN %s AND %s
+    """
+    
+    pm_params = [start_date, end_date]
+    if department_id:
+        preventive_maintenance_query += " AND m.department_id = %s"
+        pm_params.append(department_id)
+    
+    preventive_maintenance_query += " ORDER BY pms.next_due_at"
+    pm_schedules = execute_query(preventive_maintenance_query, tuple(pm_params), fetch_all=True)
+    
+    maintenance_tickets_query = """
+        SELECT mt.*, m.machine_name, m.machine_number, m.department_id,
+               CONCAT(assigned.first_name, ' ', assigned.last_name) as assigned_to_name
+        FROM maintenance_tickets mt
+        LEFT JOIN machines m ON mt.machine_id = m.id
+        LEFT JOIN users assigned ON mt.assigned_to_id = assigned.id
+        WHERE mt.status IN ('open', 'assigned', 'in_progress', 'awaiting_parts')
+    """
+    
+    mt_params = []
+    if department_id:
+        maintenance_tickets_query += " AND m.department_id = %s"
+        mt_params.append(department_id)
+    
+    maintenance_tickets_query += " ORDER BY mt.created_at DESC"
+    maintenance_tickets = execute_query(maintenance_tickets_query, tuple(mt_params) if mt_params else None, fetch_all=True)
+    
+    calendar_events = []
+    
+    for pm in pm_schedules:
+        calendar_events.append({
+            'id': f'pm_{pm["id"]}',
+            'type': 'preventive_maintenance',
+            'title': pm['schedule_name'],
+            'machine_id': pm['machine_id'],
+            'machine_name': pm['machine_name'],
+            'start': pm['next_due_at'],
+            'duration_minutes': pm['estimated_duration_minutes'] or 120,
+            'priority': pm['priority'],
+            'technician': pm['technician_name'],
+            'description': pm['description'],
+            'maintenance_type': pm['maintenance_type']
+        })
+    
+    for mt in maintenance_tickets:
+        start_time = mt.get('actual_start_time') or mt.get('expected_start_time') or mt['created_at']
+        calendar_events.append({
+            'id': f'mt_{mt["id"]}',
+            'type': 'maintenance_ticket',
+            'title': f"{mt['ticket_number']} - {mt['issue_description'][:50]}",
+            'machine_id': mt['machine_id'],
+            'machine_name': mt['machine_name'],
+            'start': start_time,
+            'status': mt['status'],
+            'severity': mt['severity'],
+            'assigned_to': mt['assigned_to_name'],
+            'ticket_number': mt['ticket_number']
+        })
+    
+    return success_response({
+        'machines': machines,
+        'events': calendar_events,
+        'preventive_maintenance': pm_schedules,
+        'maintenance_tickets': maintenance_tickets
+    })

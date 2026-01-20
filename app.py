@@ -124,6 +124,14 @@ def planning_orders():
 def planning_schedule():
     return render_template('planning/schedule.html')
 
+@app.route('/planning/capacity')
+def planning_capacity():
+    return render_template('planning/capacity.html')
+
+@app.route('/planning/machine-calendar')
+def planning_machine_calendar():
+    return render_template('planning/machine_calendar.html')
+
 @app.route('/defects/replacement-tickets')
 def defects_replacement():
     return render_template('defects/replacement_tickets.html')
@@ -132,6 +140,10 @@ def defects_replacement():
 def defects_returns():
     return render_template('defects/customer_returns.html')
 
+@app.route('/defects/cost-analysis')
+def defects_cost_analysis():
+    return render_template('defects/cost_analysis.html')
+
 @app.route('/sop/tickets')
 def sop_tickets():
     return render_template('sop/tickets.html')
@@ -139,6 +151,10 @@ def sop_tickets():
 @app.route('/maintenance/tickets')
 def maintenance_tickets():
     return render_template('maintenance/tickets.html')
+
+@app.route('/maintenance/analytics')
+def maintenance_analytics():
+    return render_template('maintenance/analytics.html')
 
 @app.route('/finance/bom')
 def finance_bom():

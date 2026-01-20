@@ -4,7 +4,9 @@ from backend.utils.auth import token_required, permission_required
 from backend.utils.response import success_response, error_response
 from backend.utils.audit import log_audit
 from backend.utils.notifications import create_notification
-from datetime import datetime
+from backend.utils.email_sender import send_email
+from datetime import datetime, timedelta
+import os
 
 defects_bp = Blueprint('defects', __name__, url_prefix='/api/defects')
 
@@ -70,17 +72,10 @@ def create_replacement_ticket():
     
     query = """
         INSERT INTO replacement_tickets
-        (ticket_number, order_id, product_id, quantity_rejected, department_id,
+        (ticket_number, order_id, product_id, order_item_id, quantity_rejected, department_id,
          stage_id, rejection_reason, rejection_type, created_by_id, notes, config)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    
-    ticket_config = data.get('config', {})
-    if order_item_id:
-        if isinstance(ticket_config, str):
-            import json
-            ticket_config = json.loads(ticket_config) if ticket_config else {}
-        ticket_config['order_item_id'] = order_item_id
     
     try:
         ticket_id = execute_query(
@@ -89,6 +84,7 @@ def create_replacement_ticket():
                 ticket_number,
                 data['order_id'],
                 product_id,
+                order_item_id,
                 data['quantity_rejected'],
                 data['department_id'],
                 data.get('stage_id'),
@@ -96,7 +92,7 @@ def create_replacement_ticket():
                 data['rejection_type'],
                 user_id,
                 data.get('notes'),
-                ticket_config
+                data.get('config')
             ),
             commit=True
         )
@@ -106,10 +102,10 @@ def create_replacement_ticket():
         if material_cost > 0:
             update_query = """
                 UPDATE replacement_tickets 
-                SET config = JSON_SET(COALESCE(config, '{}'), '$.material_cost', %s)
+                SET material_cost = %s, cost_impact = %s
                 WHERE id = %s
             """
-            execute_query(update_query, (material_cost, ticket_id), commit=True)
+            execute_query(update_query, (material_cost, material_cost, ticket_id), commit=True)
         
         dept_manager_query = "SELECT manager_id FROM departments WHERE id = %s"
         dept = execute_query(dept_manager_query, (data['department_id'],), fetch_one=True)
@@ -195,7 +191,12 @@ def update_replacement_ticket_status(id):
     
     if status == 'no_stock':
         ticket = execute_query(
-            "SELECT order_id, department_id FROM replacement_tickets WHERE id = %s",
+            """SELECT rt.id, rt.ticket_number, rt.order_id, rt.department_id,
+                      o.order_number, o.customer_name, p.product_name, rt.quantity_rejected
+               FROM replacement_tickets rt
+               LEFT JOIN orders o ON rt.order_id = o.id
+               LEFT JOIN products p ON rt.product_id = p.id
+               WHERE rt.id = %s""",
             (id,),
             fetch_one=True
         )
@@ -207,22 +208,100 @@ def update_replacement_ticket_status(id):
                 commit=True
             )
             
-            dept = execute_query(
-                "SELECT manager_id FROM departments WHERE id = %s",
+            dept_managers = execute_query(
+                """SELECT d.manager_id, u.email as manager_email, u.first_name, u.last_name,
+                          pm.id as planning_manager_id, pm.email as planning_manager_email,
+                          hod.id as hod_id, hod.email as hod_email
+                   FROM departments d
+                   LEFT JOIN users u ON d.manager_id = u.id
+                   LEFT JOIN roles r ON r.name = 'Planning Manager'
+                   LEFT JOIN users pm ON pm.role_id = r.id
+                   LEFT JOIN roles hr ON hr.name = 'HOD'
+                   LEFT JOIN users hod ON hod.role_id = hr.id
+                   WHERE d.id = %s""",
                 (ticket['department_id'],),
                 fetch_one=True
             )
             
-            if dept and dept['manager_id']:
+            email_body = f"""
+            <h2>No Stock Alert - Urgent Action Required</h2>
+            <p><strong>Replacement Ticket:</strong> {ticket['ticket_number']}</p>
+            <p><strong>Order Number:</strong> {ticket['order_number']}</p>
+            <p><strong>Customer:</strong> {ticket['customer_name']}</p>
+            <p><strong>Product:</strong> {ticket['product_name']}</p>
+            <p><strong>Quantity Rejected:</strong> {ticket['quantity_rejected']}</p>
+            <hr>
+            <p style="color: red;"><strong>Status:</strong> No Stock Available for Replacement</p>
+            <p>The order has been automatically placed on hold. Please take immediate action to resolve this stock issue.</p>
+            <p><a href="{os.getenv('APP_URL', 'http://localhost:5000')}/defects/replacement-tickets/{id}">View Ticket Details</a></p>
+            """
+            
+            recipients_to_notify = []
+            
+            if dept_managers and dept_managers['manager_id']:
                 create_notification(
-                    dept['manager_id'],
+                    dept_managers['manager_id'],
                     'no_stock_alert',
-                    'No Stock Alert',
-                    f'Replacement ticket #{id} marked as no stock - order placed on hold',
-                    'order',
+                    'No Stock Alert - Urgent',
+                    f'Replacement ticket {ticket["ticket_number"]} marked as no stock - Order {ticket["order_number"]} placed on hold',
+                    'replacement_ticket',
                     ticket['order_id'],
                     priority='urgent'
                 )
+                if dept_managers['manager_email']:
+                    recipients_to_notify.append(dept_managers['manager_email'])
+                    execute_query(
+                        "INSERT INTO defect_notifications (replacement_ticket_id, notification_type, recipient_id) VALUES (%s, %s, %s)",
+                        (id, 'no_stock_manager', dept_managers['manager_id']),
+                        commit=True
+                    )
+            
+            if dept_managers and dept_managers['planning_manager_id']:
+                create_notification(
+                    dept_managers['planning_manager_id'],
+                    'no_stock_alert',
+                    'No Stock Alert - Planning Action Required',
+                    f'Replacement ticket {ticket["ticket_number"]} marked as no stock',
+                    'replacement_ticket',
+                    ticket['order_id'],
+                    priority='urgent'
+                )
+                if dept_managers['planning_manager_email']:
+                    recipients_to_notify.append(dept_managers['planning_manager_email'])
+                    execute_query(
+                        "INSERT INTO defect_notifications (replacement_ticket_id, notification_type, recipient_id) VALUES (%s, %s, %s)",
+                        (id, 'no_stock_planning_manager', dept_managers['planning_manager_id']),
+                        commit=True
+                    )
+            
+            if dept_managers and dept_managers['hod_id']:
+                create_notification(
+                    dept_managers['hod_id'],
+                    'no_stock_alert',
+                    'No Stock Alert - HOD Escalation',
+                    f'Replacement ticket {ticket["ticket_number"]} marked as no stock - Order on hold',
+                    'replacement_ticket',
+                    ticket['order_id'],
+                    priority='urgent'
+                )
+                if dept_managers['hod_email']:
+                    recipients_to_notify.append(dept_managers['hod_email'])
+                    execute_query(
+                        "INSERT INTO defect_notifications (replacement_ticket_id, notification_type, recipient_id) VALUES (%s, %s, %s)",
+                        (id, 'no_stock_hod', dept_managers['hod_id']),
+                        commit=True
+                    )
+            
+            if recipients_to_notify:
+                try:
+                    send_email(
+                        to_emails=recipients_to_notify,
+                        subject=f'URGENT: No Stock Alert - Order {ticket["order_number"]} On Hold',
+                        body=email_body
+                    )
+                except Exception as email_error:
+                    app_logger = __import__('backend.utils.logger', fromlist=['app_logger']).app_logger
+                    app_logger.error(f"Failed to send no-stock email notification: {str(email_error)}")
     
     log_audit(user_id, 'UPDATE_STATUS', 'replacement_ticket', id, None, {'status': status})
     
@@ -292,17 +371,10 @@ def create_customer_return():
     
     query = """
         INSERT INTO customer_returns
-        (return_number, order_id, product_id, quantity_returned, return_reason,
+        (return_number, order_id, product_id, order_item_id, quantity_returned, return_reason,
          customer_complaint, return_date, return_type, recorded_by_id, notes, config)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    
-    return_config = data.get('config', {})
-    if order_item_id:
-        if isinstance(return_config, str):
-            import json
-            return_config = json.loads(return_config) if return_config else {}
-        return_config['order_item_id'] = order_item_id
     
     try:
         return_id = execute_query(
@@ -311,6 +383,7 @@ def create_customer_return():
                 return_number,
                 data['order_id'],
                 product_id,
+                order_item_id,
                 data['quantity_returned'],
                 data['return_reason'],
                 data.get('customer_complaint'),
@@ -318,7 +391,7 @@ def create_customer_return():
                 data['return_type'],
                 user_id,
                 data.get('notes'),
-                return_config
+                data.get('config')
             ),
             commit=True
         )
@@ -328,10 +401,10 @@ def create_customer_return():
         if material_cost > 0:
             update_query = """
                 UPDATE customer_returns 
-                SET config = JSON_SET(COALESCE(config, '{}'), '$.material_cost', %s)
+                SET material_cost = %s, cost_impact = %s
                 WHERE id = %s
             """
-            execute_query(update_query, (material_cost, return_id), commit=True)
+            execute_query(update_query, (material_cost, material_cost, return_id), commit=True)
         
         log_audit(user_id, 'CREATE', 'customer_return', return_id, None, data)
         
@@ -342,3 +415,105 @@ def create_customer_return():
         }, 'Customer return recorded successfully', 201)
     except Exception as e:
         return error_response(str(e), 500)
+
+@defects_bp.route('/cost-analysis', methods=['GET'])
+@token_required
+@permission_required('finance', 'read')
+def get_cost_analysis():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    department_id = request.args.get('department_id')
+    
+    if not start_date:
+        start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    if not end_date:
+        end_date = datetime.now().strftime('%Y-%m-%d')
+    
+    query = """
+        SELECT 
+            d.id as department_id,
+            d.name as department_name,
+            COUNT(rt.id) as total_defects,
+            SUM(rt.quantity_rejected) as total_quantity_rejected,
+            SUM(rt.material_cost) as total_material_cost,
+            SUM(rt.cost_impact) as total_cost_impact
+        FROM departments d
+        LEFT JOIN replacement_tickets rt ON d.id = rt.department_id
+            AND rt.created_at BETWEEN %s AND %s
+        WHERE d.is_active = TRUE
+    """
+    
+    params = [start_date, end_date]
+    
+    if department_id:
+        query += " AND d.id = %s"
+        params.append(department_id)
+    
+    query += """
+        GROUP BY d.id, d.name
+        ORDER BY total_cost_impact DESC
+    """
+    
+    department_costs = execute_query(query, tuple(params), fetch_all=True)
+    
+    top_defects_query = """
+        SELECT 
+            rt.rejection_reason,
+            COUNT(*) as defect_count,
+            SUM(rt.quantity_rejected) as total_quantity,
+            SUM(rt.cost_impact) as total_cost
+        FROM replacement_tickets rt
+        WHERE rt.created_at BETWEEN %s AND %s
+    """
+    
+    defect_params = [start_date, end_date]
+    
+    if department_id:
+        top_defects_query += " AND rt.department_id = %s"
+        defect_params.append(department_id)
+    
+    top_defects_query += """
+        GROUP BY rt.rejection_reason
+        ORDER BY total_cost DESC
+        LIMIT 10
+    """
+    
+    top_defects = execute_query(top_defects_query, tuple(defect_params), fetch_all=True)
+    
+    monthly_trend_query = """
+        SELECT 
+            DATE_FORMAT(rt.created_at, '%Y-%m') as month,
+            COUNT(*) as defect_count,
+            SUM(rt.material_cost) as material_cost,
+            SUM(rt.cost_impact) as total_cost
+        FROM replacement_tickets rt
+        WHERE rt.created_at BETWEEN %s AND %s
+    """
+    
+    trend_params = [start_date, end_date]
+    
+    if department_id:
+        monthly_trend_query += " AND rt.department_id = %s"
+        trend_params.append(department_id)
+    
+    monthly_trend_query += """
+        GROUP BY DATE_FORMAT(rt.created_at, '%Y-%m')
+        ORDER BY month ASC
+    """
+    
+    monthly_trends = execute_query(monthly_trend_query, tuple(trend_params), fetch_all=True)
+    
+    total_costs = {
+        'total_material_cost': sum(float(d.get('total_material_cost') or 0) for d in department_costs),
+        'total_cost_impact': sum(float(d.get('total_cost_impact') or 0) for d in department_costs),
+        'total_defects': sum(int(d.get('total_defects') or 0) for d in department_costs),
+        'total_quantity_rejected': sum(int(d.get('total_quantity_rejected') or 0) for d in department_costs)
+    }
+    
+    return success_response({
+        'summary': total_costs,
+        'department_costs': department_costs,
+        'top_defects': top_defects,
+        'monthly_trends': monthly_trends,
+        'date_range': {'start_date': start_date, 'end_date': end_date}
+    })

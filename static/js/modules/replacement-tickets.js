@@ -1,5 +1,6 @@
 class ReplacementTicketsPage {
     constructor() {
+        this.currentOrderItems = [];
         this.init();
     }
 
@@ -10,6 +11,8 @@ class ReplacementTicketsPage {
         }
         
         this.attachEventListeners();
+        this.loadOrders();
+        this.loadDepartments();
         this.loadTickets();
     }
 
@@ -27,6 +30,11 @@ class ReplacementTicketsPage {
         const statusFilter = document.getElementById('statusFilter');
         if (statusFilter) {
             statusFilter.addEventListener('change', () => this.loadTickets());
+        }
+
+        const orderId = document.getElementById('orderId');
+        if (orderId) {
+            orderId.addEventListener('change', () => this.handleOrderChange());
         }
 
         const ticketForm = document.getElementById('ticketForm');
@@ -53,6 +61,80 @@ class ReplacementTicketsPage {
         }
     }
 
+    async loadOrders() {
+        try {
+            const response = await API.orders.getAll();
+            if (response.success) {
+                const select = document.getElementById('orderId');
+                if (select) {
+                    select.innerHTML = '<option value="">Select Order...</option>' +
+                        response.data.map(order => 
+                            `<option value="${order.id}">${escapeHtml(order.order_number)} - ${escapeHtml(order.customer_name)}</option>`
+                        ).join('');
+                }
+            }
+        } catch (error) {
+            console.error('Error loading orders:', error);
+        }
+    }
+
+    async loadDepartments() {
+        try {
+            const response = await API.departments.getAll();
+            if (response.success) {
+                const select = document.getElementById('departmentId');
+                if (select) {
+                    select.innerHTML = '<option value="">Select Department...</option>' +
+                        response.data.map(dept => 
+                            `<option value="${dept.id}">${escapeHtml(dept.name)}</option>`
+                        ).join('');
+                }
+            }
+        } catch (error) {
+            console.error('Error loading departments:', error);
+        }
+    }
+
+    async handleOrderChange() {
+        const orderId = document.getElementById('orderId').value;
+        const orderItemGroup = document.getElementById('orderItemGroup');
+        const orderItemSelect = document.getElementById('orderItemId');
+        
+        if (!orderId) {
+            orderItemGroup.style.display = 'none';
+            orderItemSelect.innerHTML = '<option value="">Select Item...</option>';
+            this.currentOrderItems = [];
+            return;
+        }
+        
+        try {
+            const response = await API.orders.getItems(orderId);
+            if (response.success && response.data && response.data.length > 0) {
+                this.currentOrderItems = response.data;
+                
+                if (response.data.length > 1) {
+                    orderItemGroup.style.display = 'block';
+                    orderItemSelect.required = true;
+                    orderItemSelect.innerHTML = '<option value="">Select Item...</option>' +
+                        response.data.map(item => 
+                            `<option value="${item.id}">${escapeHtml(item.product_name)} - Qty: ${item.quantity}</option>`
+                        ).join('');
+                } else {
+                    orderItemGroup.style.display = 'none';
+                    orderItemSelect.required = false;
+                    orderItemSelect.value = response.data[0].id;
+                }
+            } else {
+                orderItemGroup.style.display = 'none';
+                orderItemSelect.innerHTML = '<option value="">Select Item...</option>';
+                this.currentOrderItems = [];
+            }
+        } catch (error) {
+            console.error('Error loading order items:', error);
+            showAlert('Failed to load order items', 'danger');
+        }
+    }
+
     async loadTickets() {
         const status = document.getElementById('statusFilter').value;
         const params = status ? { status } : {};
@@ -62,23 +144,28 @@ class ReplacementTicketsPage {
             
             if (response.success) {
                 const tbody = document.getElementById('ticketsTable');
-                tbody.innerHTML = response.data.map(ticket => `
-                    <tr>
-                        <td>${ticket.ticket_number}</td>
-                        <td>${ticket.order_number}</td>
-                        <td>${ticket.customer_name}</td>
-                        <td>${ticket.department_name}</td>
-                        <td>${ticket.quantity_rejected}</td>
-                        <td>${ticket.rejection_type}</td>
-                        <td>${createStatusBadge(ticket.status)}</td>
-                        <td>
-                            <button class="btn btn-sm btn-primary view-ticket-btn" data-ticket-id="${ticket.id}">View</button>
-                            ${ticket.status === 'pending_approval' ? 
-                                `<button class="btn btn-sm btn-success approve-ticket-btn" data-ticket-id="${ticket.id}">Approve</button>` :
-                                ''}
-                        </td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = response.data.map(ticket => {
+                    const costImpact = ticket.material_cost || ticket.cost_impact || 0;
+                    return `
+                        <tr>
+                            <td>${ticket.ticket_number}</td>
+                            <td>${ticket.order_number}</td>
+                            <td>${ticket.customer_name || '-'}</td>
+                            <td>${ticket.product_name || '-'}</td>
+                            <td>${ticket.department_name || '-'}</td>
+                            <td>${ticket.quantity_rejected}</td>
+                            <td>${formatCurrency(costImpact)}</td>
+                            <td><span class="badge badge-secondary">${ticket.rejection_type}</span></td>
+                            <td>${createStatusBadge(ticket.status)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary view-ticket-btn" data-ticket-id="${ticket.id}">View</button>
+                                ${ticket.status === 'pending_approval' ? 
+                                    `<button class="btn btn-sm btn-success approve-ticket-btn" data-ticket-id="${ticket.id}">Approve</button>` :
+                                    ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             }
         } catch (error) {
             console.error('Error loading tickets:', error);
@@ -107,20 +194,45 @@ class ReplacementTicketsPage {
     async submitTicketForm(event) {
         event.preventDefault();
         
+        const orderId = document.getElementById('orderId').value;
+        const orderItemId = document.getElementById('orderItemId').value;
+        const departmentId = document.getElementById('departmentId').value;
+        
+        if (!orderId) {
+            showAlert('Please select an order', 'danger');
+            return;
+        }
+        
+        if (!departmentId) {
+            showAlert('Please select a department', 'danger');
+            return;
+        }
+        
         const data = {
-            order_number: document.getElementById('orderNumber').value,
+            order_id: parseInt(orderId),
+            department_id: parseInt(departmentId),
             quantity_rejected: parseInt(document.getElementById('quantityRejected').value),
             rejection_type: document.getElementById('rejectionType').value,
-            rejection_reason: document.getElementById('rejectionReason').value
+            rejection_reason: document.getElementById('rejectionReason').value,
+            notes: document.getElementById('notes').value || null
         };
+        
+        if (orderItemId) {
+            data.order_item_id = parseInt(orderItemId);
+        }
         
         try {
             const response = await API.defects.createReplacementTicket(data);
             
             if (response.success) {
-                showAlert('Ticket created successfully', 'success');
+                const costMsg = response.data.material_cost > 0 
+                    ? ` (Estimated cost: ${formatCurrency(response.data.material_cost)})`
+                    : '';
+                showAlert(`Ticket created successfully${costMsg}`, 'success');
                 hideModal('addTicketModal');
-                resetForm('ticketForm');
+                document.getElementById('ticketForm').reset();
+                this.currentOrderItems = [];
+                document.getElementById('orderItemGroup').style.display = 'none';
                 this.loadTickets();
             }
         } catch (error) {
