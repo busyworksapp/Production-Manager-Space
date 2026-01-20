@@ -106,37 +106,19 @@ class WhatsAppFlowHandler:
             context={}
         )
         
-        # For Twilio, send text-based menu (interactive lists not supported)
-        menu_text = """📋 *Main Menu*
-
-Please select an option by typing the number:
-
-1️⃣ 📦 Submit Reject - Report a defective product
-2️⃣ 🔄 Customer Return - Process a customer return
-3️⃣ ⚠️ SOP Failure - Report a process failure
-4️⃣ 🔍 Track Item - Track an order or ticket
-5️⃣ 📊 Pull Data - Get reports and statistics
-
-Type: 1, 2, 3, 4, or 5"""
+        # For Twilio, send text-based menu
+        menu_text = (
+            "📋 *Main Menu*\n\n"
+            "Please select an option by typing the number:\n\n"
+            "1️⃣ 📦 Submit Reject - Report a defective product\n"
+            "2️⃣ 🔄 Customer Return - Process a customer return\n"
+            "3️⃣ ⚠️ SOP Failure - Report a process failure\n"
+            "4️⃣ 🔍 Track Item - Track an order or ticket\n"
+            "5️⃣ 📊 Pull Data - Get reports and statistics\n\n"
+            "Type: 1, 2, 3, 4, or 5"
+        )
         
-        try:
-            # Try Graph API first (for Meta WhatsApp Business accounts)
-            try:
-                whatsapp_service.send_interactive_list(
-                    phone,
-                    self.MAIN_MENU['text'],
-                    "Select Option",
-                    self.MAIN_MENU['sections']
-                )
-            except Exception as graph_api_error:
-                # Fallback to Twilio for text-based menu
-                app_logger.info(
-                    f"Graph API failed, using Twilio: {graph_api_error}"
-                )
-                twilio_service.send_whatsapp_message(phone, menu_text)
-        except Exception as e:
-            app_logger.error(f"Failed to send menu to {phone}: {str(e)}")
-            raise
+        self._send_message(phone, menu_text)
         
         return {"status": "menu_shown"}
     

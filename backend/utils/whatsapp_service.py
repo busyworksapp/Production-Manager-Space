@@ -13,15 +13,43 @@ class WhatsAppService:
         self.access_token = os.getenv('WHATSAPP_ACCESS_TOKEN')
         self.verify_token = os.getenv('WHATSAPP_VERIFY_TOKEN')
         self.business_account_id = os.getenv('WHATSAPP_BUSINESS_ACCOUNT_ID')
+        self.twilio_service = None  # Lazy load
         
-    def verify_webhook(self, mode: str, token: str, challenge: str) -> Optional[str]:
-        if mode == 'subscribe' and token == self.verify_token:
-            app_logger.info("Webhook verified successfully")
-            return challenge
-        app_logger.warning("Webhook verification failed")
-        return None
+    def _get_twilio_service(self):
+        """Lazy load Twilio service to avoid circular imports"""
+        if self.twilio_service is None:
+            try:
+                from backend.utils.twilio_service import twilio_service
+                self.twilio_service = twilio_service
+            except Exception as e:
+                app_logger.debug(f"Could not load Twilio: {e}")
+        return self.twilio_service
     
     def send_text_message(self, to: str, message: str) -> Dict[str, Any]:
+        # Try Twilio first (for Twilio WhatsApp integration)
+        twilio_svc = self._get_twilio_service()
+        if twilio_svc:
+            try:
+                result = twilio_svc.send_whatsapp_message(to, message)
+                if result.get('success'):
+                    self._log_message(
+                        to,
+                        'outbound',
+                        'text',
+                        message,
+                        result
+                    )
+                    app_logger.info(
+                        f"Message sent via Twilio to {to}: "
+                        f"{message[:50]}..."
+                    )
+                    return result
+            except Exception as e:
+                app_logger.debug(
+                    f"Twilio send failed, trying Graph API: {e}"
+                )
+        
+        # Fallback to Graph API (for Meta WhatsApp Business)
         url = f"{self.api_url}/{self.phone_number_id}/messages"
         headers = {
             "Authorization": f"Bearer {self.access_token}",
@@ -35,16 +63,33 @@ class WhatsAppService:
         }
         
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=10
+            )
             response.raise_for_status()
             result = response.json()
             
             self._log_message(to, 'outbound', 'text', message, result)
-            app_logger.info(f"Message sent to {to}: {message[:50]}...")
+            app_logger.info(
+                f"Message sent via Graph API to {to}: "
+                f"{message[:50]}..."
+            )
             return result
         except Exception as e:
-            app_logger.error(f"Failed to send message to {to}: {str(e)}")
-            self._log_message(to, 'outbound', 'text', message, {'error': str(e)}, status='failed')
+            app_logger.error(
+                f"Failed to send message to {to}: {str(e)}"
+            )
+            self._log_message(
+                to,
+                'outbound',
+                'text',
+                message,
+                {'error': str(e)},
+                status='failed'
+            )
             raise
     
     def send_interactive_buttons(self, to: str, body_text: str, buttons: List[Dict[str, str]]) -> Dict[str, Any]:
