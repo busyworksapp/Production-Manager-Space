@@ -75,6 +75,23 @@ def webhook_receive():
         
         # Handle Twilio format (direct form fields with from/body)
         if 'from' in data and 'body' in data:
+            # Skip status updates (delivered, sent, read)
+            if data.get('body') is None:
+                app_logger.debug(
+                    f"Ignoring Twilio status message from "
+                    f"{data.get('from')}"
+                )
+                return jsonify({'status': 'ok'}), 200
+            
+            # Skip messages from bot itself (self-messages)
+            bot_number = 'whatsapp:+14155238886'
+            if data.get('from') == bot_number:
+                app_logger.debug(
+                    f"Ignoring message from bot itself: "
+                    f"{data.get('from')}"
+                )
+                return jsonify({'status': 'ok'}), 200
+            
             app_logger.info(
                 f"Processing Twilio message from {data.get('from')}"
             )

@@ -62,28 +62,68 @@ class WhatsAppFlowHandler:
             'pull_data': self._handle_pull_data_flow
         }
     
-    def handle_message(self, phone: str, message_text: str, message_type: str = 'text', payload: Dict = None) -> Dict[str, Any]:
+    def handle_message(
+        self,
+        phone: str,
+        message_text: str,
+        message_type: str = 'text',
+        payload: Dict = None
+    ) -> Dict[str, Any]:
         try:
+            # Skip messages with no text content
+            if not message_text:
+                app_logger.debug(
+                    f"Skipping empty message from {phone}"
+                )
+                return {"status": "skipped"}
+            
             session = whatsapp_service.get_session(phone)
             
             if not session:
-                session_id = whatsapp_service._get_or_create_session(phone)
+                session_id = (
+                    whatsapp_service._get_or_create_session(phone)
+                )
                 session = whatsapp_service.get_session(phone)
             
-            whatsapp_service._log_message(phone, 'inbound', message_type, message_text, payload or {})
+            whatsapp_service._log_message(
+                phone,
+                'inbound',
+                message_type,
+                message_text,
+                payload or {}
+            )
             
             message_lower = message_text.lower().strip()
             
-            if message_lower in ['hi', 'hello', 'menu', 'start', 'help']:
+            if message_lower in (
+                'hi',
+                'hello',
+                'menu',
+                'start',
+                'help'
+            ):
                 return self._show_main_menu(phone, session)
             
-            if session.get('current_flow') and session.get('session_state') == 'awaiting_input':
+            if (
+                session.get('current_flow')
+                and session.get('session_state') == 'awaiting_input'
+            ):
                 flow_name = session['current_flow']
                 if flow_name in self.flow_handlers:
-                    return self.flow_handlers[flow_name](phone, session, message_text, message_type, payload)
+                    return self.flow_handlers[flow_name](
+                        phone,
+                        session,
+                        message_text,
+                        message_type,
+                        payload
+                    )
             
             if message_type == 'interactive':
-                return self._handle_interactive_response(phone, session, payload)
+                return self._handle_interactive_response(
+                    phone,
+                    session,
+                    payload
+                )
             
             return self._show_main_menu(phone, session)
             
