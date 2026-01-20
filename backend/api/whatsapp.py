@@ -3,6 +3,7 @@ from backend.utils.logger import app_logger
 from backend.utils.whatsapp_service import whatsapp_service
 from backend.utils.whatsapp_flow_handler import flow_handler
 import json
+from threading import Thread
 
 whatsapp_bp = Blueprint('whatsapp', __name__, url_prefix='/api/whatsapp')
 
@@ -192,7 +193,13 @@ def process_incoming_message(message: dict):
             )
             return
         
-        flow_handler.handle_message(phone, message_text, message_type, payload)
+        # Process message asynchronously to avoid blocking
+        thread = Thread(
+            target=flow_handler.handle_message,
+            args=(phone, message_text, message_type, payload),
+            daemon=True
+        )
+        thread.start()
         
     except Exception as e:
         app_logger.error(f"Error processing incoming message: {str(e)}")
