@@ -7,29 +7,45 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo">PMS</div>
-            <nav class="nav">
-                <a href="/dashboard" class="nav-link active">Dashboard</a>
-                <a href="/planning/orders" class="nav-link">Planning</a>
-                <a href="/defects/replacement-tickets" class="nav-link">Defects</a>
-                <a href="/sop/tickets" class="nav-link">SOP & NCR</a>
-                <a href="/maintenance/tickets" class="nav-link">Maintenance</a>
-                <a href="/admin/departments" class="nav-link">Admin</a>
-            </nav>
-            <div class="user-menu">
-                <div class="notification-badge">
-                    <span class="badge hidden-badge">0</span>
-                    <span>🔔</span>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">P</div>
+                    <span>PMS</span>
                 </div>
-                <span id="username"></span>
-                <button class="btn btn-sm btn-secondary logout-btn">Logout</button>
             </div>
-        </div>
-    </div>
-    
-    <div class="container">
+            
+            <nav class="sidebar-nav"></nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="userAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName">Loading...</div>
+                        <div class="user-role" id="userRole">User</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <div class="topbar">
+                <div class="topbar-left">
+                    <h1 class="page-title">Dashboard</h1>
+                </div>
+                <div class="topbar-right">
+                    <div class="topbar-actions">
+                        <div class="notification-badge">
+                            <span class="notification-icon">🔔</span>
+                            <span class="badge hidden-badge">0</span>
+                        </div>
+                        <button class="btn btn-sm btn-secondary logout-btn">Logout</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="container">
         <h1 class="dashboard-title">Dashboard</h1>
         
         <div class="grid grid-4">
@@ -71,12 +87,23 @@
                 <div class="card-header">Recent Notifications</div>
                 <div id="recentNotifications">Loading...</div>
             </div>
-        </div>
+            </div>
+            </div>
+        </main>
     </div>
     
     <script src="/static/js/api.js"></script>
     <script src="/static/js/auth.js"></script>
+    <script src="/static/js/navigation.js"></script>
     <script src="/static/js/utils.js"></script>
     <script src="/static/js/modules/dashboard.js"></script>
+    <script>
+        const user = getCurrentUser();
+        if (user) {
+            document.getElementById('userName').textContent = `${user.first_name} ${user.last_name}`;
+            document.getElementById('userRole').textContent = user.role || 'User';
+            document.getElementById('userAvatar').textContent = user.first_name.charAt(0).toUpperCase();
+        }
+    </script>
 </body>
 </html>
