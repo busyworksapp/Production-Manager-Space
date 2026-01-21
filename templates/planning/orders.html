@@ -26,7 +26,7 @@
         <div class="page-header-flex">
             <h1>Orders</h1>
             <div class="page-actions-group">
-                <button class="btn btn-secondary">Import Orders</button>
+                <button class="btn btn-secondary import-orders-btn">Import Orders</button>
                 <button class="btn btn-primary add-order-btn">Add Order</button>
             </div>
         </div>
@@ -305,6 +305,29 @@
             
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary close-modal-btn" data-modal="exceptionDetailsModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="importOrdersModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import Orders from Excel</h2>
+            </div>
+            
+            <div style="padding: 20px;">
+                <div class="form-group">
+                    <label class="form-label">Select Excel File</label>
+                    <input type="file" id="importFileInput" class="form-input" accept=".xlsx,.xls,.csv" 
+                           onchange="ordersPage.handleImportFile(event)">
+                    <small style="color: var(--color-text-secondary); margin-top: 8px; display: block;">
+                        Supported formats: Excel (.xlsx, .xls) or CSV
+                    </small>
+                </div>
+                
+                <div id="importPreview" style="margin-top: 20px; min-height: 100px;">
+                    <p style="color: var(--color-text-secondary); text-align: center;">Select a file to preview before importing</p>
+                </div>
             </div>
         </div>
     </div>

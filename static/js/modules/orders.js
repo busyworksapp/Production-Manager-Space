@@ -32,6 +32,11 @@ class OrdersPage {
             addOrderBtn.addEventListener('click', () => showModal('addOrderModal'));
         }
 
+        const importOrdersBtn = document.querySelector('.import-orders-btn');
+        if (importOrdersBtn) {
+            importOrdersBtn.addEventListener('click', () => showModal('importOrdersModal'));
+        }
+
         const statusFilter = document.getElementById('statusFilter');
         if (statusFilter) {
             statusFilter.addEventListener('change', () => this.loadOrders());
@@ -562,6 +567,172 @@ class OrdersPage {
 
     scheduleOrder(orderId) {
         window.location.href = `/planning/schedule?order=${orderId}`;
+    }
+
+    async handleImportFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/orders/import/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Authorization': `Bearer ${getToken()}`
+                }
+            });
+
+            const result = await response.json();
+            if (result.success && result.data) {
+                this.showImportPreview(result.data, file);
+            } else {
+                showNotification('Error uploading file: ' + (result.message || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            showNotification('Error uploading file: ' + error.message, 'error');
+        }
+    }
+
+    showImportPreview(previewData, file) {
+        const modal = document.getElementById('importOrdersModal');
+        const previewContainer = document.getElementById('importPreview');
+        
+        if (!previewContainer) return;
+
+        let html = `
+            <div class="card">
+                <div class="card-header">
+                    <h3>Import Preview - ${file.name}</h3>
+                    <p>Total rows to import: <strong>${previewData.total_rows}</strong></p>
+                </div>
+                <div class="card-body">
+        `;
+
+        if (previewData.errors && previewData.errors.length > 0) {
+            html += `
+                <div class="alert alert-warning">
+                    <strong>Errors found in ${previewData.errors.length} rows:</strong>
+                    <ul>
+            `;
+            previewData.errors.slice(0, 5).forEach(err => {
+                html += `<li>Row ${err.row}: ${err.error}</li>`;
+            });
+            if (previewData.errors.length > 5) {
+                html += `<li>... and ${previewData.errors.length - 5} more errors</li>`;
+            }
+            html += `</ul></div>`;
+        }
+
+        // Show preview table
+        if (previewData.preview && previewData.preview.length > 0) {
+            html += `
+                <div style="overflow-x: auto; margin: 20px 0;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>Customer</th>
+                                <th>Quantity</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Prod Start</th>
+                                <th>Prod End</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            previewData.preview.forEach(row => {
+                html += `
+                    <tr>
+                        <td>${row.reference_number || 'N/A'}</td>
+                        <td>${row.customer_name || 'N/A'}</td>
+                        <td>${row.quantity || 0}</td>
+                        <td><span class="badge badge-info">${row.status}</span></td>
+                        <td><span class="badge badge-warning">${row.priority}</span></td>
+                        <td>${row.production_start || 'N/A'}</td>
+                        <td>${row.production_end || 'N/A'}</td>
+                    </tr>
+                `;
+            });
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        html += `
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="hideModal('importOrdersModal')">Cancel</button>
+                    <button class="btn btn-primary" onclick="ordersPage.confirmImport('${file.name}', ${previewData.total_rows})">
+                        Import ${previewData.total_rows} Orders
+                    </button>
+                </div>
+            </div>
+        `;
+
+        previewContainer.innerHTML = html;
+    }
+
+    async confirmImport(fileName, totalRows) {
+        const fileInput = document.getElementById('importFileInput');
+        if (!fileInput || !fileInput.files[0]) {
+            showNotification('File not found', 'error');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = async (e) => {
+            try {
+                const base64 = e.target.result.split(',')[1];
+                
+                const response = await fetch('/api/orders/import/import', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify({
+                        file_content: base64,
+                        headers: this.lastFileHeaders || []
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    showNotification(
+                        `Successfully imported ${result.data.imported_count} out of ${result.data.total_rows} orders`,
+                        'success'
+                    );
+                    
+                    if (result.data.errors && result.data.errors.length > 0) {
+                        let errorMsg = `Import completed with ${result.data.errors.length} errors:\n`;
+                        result.data.errors.slice(0, 5).forEach(err => {
+                            errorMsg += `Row ${err.row}: ${err.error}\n`;
+                        });
+                        console.warn(errorMsg);
+                    }
+                    
+                    hideModal('importOrdersModal');
+                    this.loadOrders();
+                } else {
+                    showNotification('Import failed: ' + (result.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Error importing orders:', error);
+                showNotification('Error importing orders: ' + error.message, 'error');
+            }
+        };
+
+        reader.readAsDataURL(file);
     }
 }
 

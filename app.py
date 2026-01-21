@@ -35,6 +35,7 @@ from backend.api.field_permissions import field_permissions_bp
 from backend.api.health import health_bp
 from backend.api.whatsapp import whatsapp_bp
 from backend.api.twilio_api import twilio_bp
+from backend.api.order_import import order_import_bp
 from backend.utils.scheduler import scheduler
 
 app = Flask(__name__, 
@@ -85,6 +86,7 @@ app.register_blueprint(field_permissions_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(whatsapp_bp)
 app.register_blueprint(twilio_bp)
+app.register_blueprint(order_import_bp)
 
 @app.route('/')
 def index():
