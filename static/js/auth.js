@@ -70,9 +70,10 @@ async function initAuth() {
         return;
     }
     
+    // Try to refresh user data from server, but don't log out if it fails
     try {
         const response = await API.auth.getMe();
-        if (response.success) {
+        if (response && response.success) {
             const userData = response.data;
             // Parse permissions if they're a JSON string
             if (userData.permissions && typeof userData.permissions === 'string') {
@@ -86,11 +87,20 @@ async function initAuth() {
             setCurrentUser(userData);
             window.dispatchEvent(new CustomEvent('user-loaded', { detail: userData }));
         } else {
-            logout();
+            // Response is not successful, but keep user logged in with cached data
+            console.warn('Failed to refresh user data, using cached data');
+            const cachedUser = getCurrentUser();
+            if (cachedUser) {
+                window.dispatchEvent(new CustomEvent('user-loaded', { detail: cachedUser }));
+            }
         }
     } catch (error) {
-        console.error('Auth initialization failed:', error);
-        logout();
+        // API call failed but user has token, keep them logged in with cached data
+        console.warn('Auth refresh error (keeping user logged in):', error);
+        const cachedUser = getCurrentUser();
+        if (cachedUser) {
+            window.dispatchEvent(new CustomEvent('user-loaded', { detail: cachedUser }));
+        }
     }
 }
 

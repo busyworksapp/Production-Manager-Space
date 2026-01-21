@@ -30,17 +30,17 @@ async function apiRequest(endpoint, method = 'GET', data = null, requiresAuth = 
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/login';
-            return;
+            return { success: false, error: 'Unauthorized' };
         }
         
         if (!response.ok) {
-            throw new Error(result.error || 'Request failed');
+            return { success: false, error: result.error || 'Request failed' };
         }
         
         return result;
     } catch (error) {
         console.error('API Request Error:', error);
-        throw error;
+        return { success: false, error: error.message };
     }
 }
 
